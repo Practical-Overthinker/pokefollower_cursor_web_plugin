@@ -21,7 +21,7 @@ with retro 2D Pokemon sprites that follow your cursor around the web.
 
 | Installs | Reward |
 |----------|--------|
-| 100,000 | Will add Gen 5 (Unova) + ***SHINIES!!!*** |
+| 50,000 | Will add Gen 5 (Unova)|
 
 </div>
 
