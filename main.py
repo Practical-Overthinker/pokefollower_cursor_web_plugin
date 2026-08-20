@@ -48,6 +48,7 @@ def main() -> int:
     window.place_at_startup_position()
 
     tray = Tray(enabled=cfg.enabled)
+    tray.show_startup_message()
 
     def on_enabled_toggled(enabled: bool) -> None:
         cfg.enabled = enabled

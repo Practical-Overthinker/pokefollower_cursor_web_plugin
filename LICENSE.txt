@@ -1,0 +1,64 @@
+PokéFollower Desktop — Licencia y atribución
+==============================================
+
+Este instalador distribuye dos tipos de contenido con licencias distintas: el código
+(MIT) y los sprites de Pokémon (CC-BY-NC-SA 4.0). Al instalar y usar esta aplicación,
+aceptas los términos de ambas.
+
+------------------------------------------------------------------------------
+1. Código y diseño — Licencia MIT
+------------------------------------------------------------------------------
+
+PokéFollower Desktop es un fork conceptual, para uso personal y sin fines comerciales,
+de la extensión de Chrome "PokéFollower" (pokefollower_cursor_web_plugin), creada
+originalmente por Ali Hamad (ThinkrDoer).
+
+Copyright (c) 2025 Ali Hamad and contributors
+
+Se concede permiso, de forma gratuita, a cualquier persona que obtenga una copia de
+este software y de los archivos de documentación asociados (el "Software"), para
+utilizar el Software sin restricción, incluyendo sin limitación los derechos de usar,
+copiar, modificar, fusionar, publicar, distribuir, sublicenciar y/o vender copias del
+Software, y de permitir a las personas a las que se les proporcione el Software que
+lo hagan, sujeto a las siguientes condiciones:
+
+El aviso de copyright anterior y este aviso de permiso deberán incluirse en todas las
+copias o partes sustanciales del Software.
+
+EL SOFTWARE SE PROPORCIONA "TAL CUAL", SIN GARANTÍA DE NINGÚN TIPO, EXPRESA O
+IMPLÍCITA, INCLUYENDO PERO NO LIMITADO A GARANTÍAS DE COMERCIALIZACIÓN, IDONEIDAD
+PARA UN PROPÓSITO PARTICULAR Y NO INFRACCIÓN. EN NINGÚN CASO LOS AUTORES O TITULARES
+DEL COPYRIGHT SERÁN RESPONSABLES DE NINGUNA RECLAMACIÓN, DAÑOS U OTRAS
+RESPONSABILIDADES, YA SEA EN UNA ACCIÓN DE CONTRATO, AGRAVIO O CUALQUIER OTRO MOTIVO,
+DERIVADAS DE, FUERA DE O EN CONEXIÓN CON EL SOFTWARE O EL USO U OTRO TIPO DE ACCIONES
+EN EL SOFTWARE.
+
+------------------------------------------------------------------------------
+2. Sprites de Pokémon — Creative Commons BY-NC-SA 4.0 (NonCommercial + ShareAlike)
+------------------------------------------------------------------------------
+
+Los spritesheets y assets visuales de Pokémon incluidos en esta aplicación provienen
+de PMD Sprite Repository (sprites.pmdcollab.org) y son © de sus contribuidores
+individuales, usados bajo licencia Creative Commons Attribution-NonCommercial-
+ShareAlike 4.0 International (CC-BY-NC-SA 4.0):
+
+  https://creativecommons.org/licenses/by-nc-sa/4.0/
+
+Esto significa que esta obra (y cualquier derivado, incluido este instalador):
+
+  - NO puede usarse con fines comerciales.
+  - Cualquier redistribución debe mantener la misma licencia (ShareAlike).
+  - Debe conservar la atribución a los contribuidores originales de PMD Sprite
+    Repository.
+
+Las imágenes de referencia/popup de Pokémon usadas durante el desarrollo del catálogo
+provienen de Pokémon Database (pokemondb.net).
+
+Pokémon y los nombres de personajes son marcas registradas de Nintendo/Game Freak/
+Creatures Inc. Este proyecto es un trabajo de fans, no oficial, sin ánimo de lucro, y
+no está afiliado ni respaldado por dichas compañías.
+
+------------------------------------------------------------------------------
+
+Ver CREDITS.txt para la atribución original completa del proyecto del que este es un
+fork conceptual.

@@ -50,3 +50,15 @@ class Tray(QObject):
 
     def hide(self) -> None:
         self._icon.hide()
+
+    def show_startup_message(self) -> None:
+        """La app no tiene ventana principal: sin esto, un usuario que instala y ejecuta
+        no ve nada y puede creer que falló. Se muestra en cada arranque, no solo la
+        primera vez — no hay estado de "ya lo vi" que valga la complejidad de rastrear.
+        """
+        self._icon.showMessage(
+            "PokéFollower",
+            "Está corriendo aquí, en la bandeja del sistema. Clic derecho para opciones.",
+            QSystemTrayIcon.MessageIcon.Information,
+            4000,
+        )
