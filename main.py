@@ -1,15 +1,16 @@
-"""Fase 2: el Pokémon sigue el cursor. Tray mínimo (Enabled, Exit)."""
+"""Fase 3: catálogo completo, selector de Pokémon, persistencia."""
 from __future__ import annotations
 
 import sys
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QGuiApplication
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QDialog
 
 import config
 from follower import FollowerWindow
 from pokemon import PackLoadError, load_pack
+from selector import PokemonSelectorDialog
 from tray import Tray
 
 
@@ -46,11 +47,28 @@ def main() -> int:
             window.stop()
             window.hide()
 
+    def on_choose_pokemon() -> None:
+        dialog = PokemonSelectorDialog(cfg.pokemon)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        new_id = dialog.selected_pack_id()
+        if not new_id or new_id == cfg.pokemon:
+            return
+        try:
+            new_pack = load_pack(new_id)
+        except PackLoadError as exc:
+            print(f"Error cargando pack '{new_id}': {exc}", file=sys.stderr)
+            return
+        cfg.pokemon = new_id
+        config.save(cfg)
+        window.set_pack(new_pack)
+
     def on_exit_requested() -> None:
         window.stop()
         app.quit()
 
     tray.enabled_toggled.connect(on_enabled_toggled)
+    tray.choose_pokemon_requested.connect(on_choose_pokemon)
     tray.exit_requested.connect(on_exit_requested)
 
     if cfg.enabled:

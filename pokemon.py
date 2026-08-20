@@ -12,6 +12,9 @@ from PySide6.QtGui import QPixmap
 ASSETS_DIR = Path(__file__).parent / "assets"
 PACKS_DIR = ASSETS_DIR / "packs"
 RAW_DIR = ASSETS_DIR / "raw"
+UI_DIR = ASSETS_DIR / "ui"
+INDEX_PATH = PACKS_DIR / "index.json"
+NAME_OVERRIDES_PATH = PACKS_DIR / "name-overrides.json"
 
 DIRECTIONS = (
     "front", "frontRight", "right", "backRight",
@@ -21,6 +24,49 @@ DIRECTIONS = (
 
 class PackLoadError(RuntimeError):
     pass
+
+
+@dataclass
+class PackEntry:
+    """Una entrada del catálogo (para el selector), sin cargar sprites."""
+    id: str
+    name: str
+    generation: str
+    thumbnail: Path
+
+
+def load_index() -> list[PackEntry]:
+    """Lee assets/packs/index.json + name-overrides.json -> catálogo completo.
+
+    Nota: el 'id' de cada entrada (p.ej. 'retro/gen-1/009-blastoise') lleva el
+    prefijo de familia ('retro/'), a diferencia de 'rawPath' dentro de cada JSON
+    de pack, que no lo lleva.
+    """
+    if not INDEX_PATH.exists():
+        raise PackLoadError(f"índice no encontrado: {INDEX_PATH}")
+    try:
+        raw = json.loads(INDEX_PATH.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise PackLoadError(f"índice inválido: {exc}") from exc
+
+    overrides: dict[str, str] = {}
+    if NAME_OVERRIDES_PATH.exists():
+        try:
+            overrides = json.loads(NAME_OVERRIDES_PATH.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            overrides = {}
+
+    entries: list[PackEntry] = []
+    for family, items in raw.items():
+        for item in items:
+            pack_id = item["id"]
+            name = overrides.get(pack_id, item.get("name", pack_id))
+            parts = pack_id.split("/")
+            generation = parts[1] if len(parts) > 1 else ""
+            slug = parts[-1]
+            thumbnail = UI_DIR / generation / f"{slug}.png"
+            entries.append(PackEntry(id=pack_id, name=name, generation=generation, thumbnail=thumbnail))
+    return entries
 
 
 @dataclass
@@ -80,7 +126,7 @@ class Pack:
         return cropped
 
 
-def _parse_state(pack_id: str, state_name: str, raw: dict, sheet_sizes: dict[str, QPixmap]) -> StateDef:
+def _parse_state(pack_id: str, state_name: str, raw: dict) -> StateDef:
     try:
         sheet = raw["sheet"]
         frame_w = int(raw["frame"]["w"])
@@ -129,7 +175,7 @@ def load_pack(pack_id: str) -> Pack:
 
     states: dict[str, StateDef] = {}
     for state_name, state_raw in states_raw.items():
-        states[state_name] = _parse_state(pack_id, state_name, state_raw, {})
+        states[state_name] = _parse_state(pack_id, state_name, state_raw)
 
     pack = Pack(pack_id=pack_id, name=name, raw_path=raw_path, states=states)
 

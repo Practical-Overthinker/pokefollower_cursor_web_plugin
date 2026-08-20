@@ -109,6 +109,14 @@ class FollowerWindow(QWidget):
 
     # -- configuración en caliente ------------------------------------------
 
+    def set_pack(self, pack: Pack) -> None:
+        """Cambia de Pokémon en caliente. Reinicia la animación: los índices de
+        fila/frame del pack anterior no son válidos para el nuevo (frame counts
+        y filas difieren entre packs)."""
+        self._pack = pack
+        self._anim = AnimationState()
+        self.set_frame("idle", 0, 0)
+
     def set_speed_config(self, lerp: float) -> None:
         self._lerp = lerp
 
