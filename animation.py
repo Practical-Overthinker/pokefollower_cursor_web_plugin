@@ -51,9 +51,15 @@ def pick_row_for_state(rows: dict[str, int], vx: float, vy: float) -> int:
     return rows.get("front", 0)
 
 
-def pick_state_by_speed(now_ms: float, last_move_ts: float, is_walking: bool, has_sleep: bool) -> str:
+def pick_state_by_speed(
+    now_ms: float,
+    last_move_ts: float,
+    is_walking: bool,
+    has_sleep: bool,
+    sleep_timeout_ms: float = SLEEP_TIMEOUT_MS,
+) -> str:
     """Réplica de pickStateBySpeed(): el nombre miente, no usa velocidad del cursor."""
-    if has_sleep and (now_ms - last_move_ts) > SLEEP_TIMEOUT_MS:
+    if has_sleep and (now_ms - last_move_ts) > sleep_timeout_ms:
         return "sleep"
     return "walk" if is_walking else "idle"
 

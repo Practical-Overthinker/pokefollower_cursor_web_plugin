@@ -13,6 +13,11 @@ SPEED_CONFIG_MAX = 0.50
 WALK_SPEED_MIN_PXPS = 80.0
 WALK_SPEED_MAX_PXPS = 640.0
 
+# Rangos válidos para los controles de Settings (settings.py) y para sanear config.json.
+SCALE_MIN, SCALE_MAX = 0.5, 3.0
+OFFSET_MIN, OFFSET_MAX = 0.0, 100.0
+SLEEP_AFTER_MIN, SLEEP_AFTER_MAX = 5, 300
+
 
 @dataclass
 class Config:
@@ -26,6 +31,19 @@ class Config:
     start_with_windows: bool = False
 
 
+def _clamp(value: float, lo: float, hi: float) -> float:
+    return max(lo, min(hi, value))
+
+
+def _sanitize(cfg: Config) -> Config:
+    """Corrige valores fuera de rango (p.ej. tras editar config.json a mano)."""
+    cfg.scale = _clamp(float(cfg.scale), SCALE_MIN, SCALE_MAX)
+    cfg.offset = _clamp(float(cfg.offset), OFFSET_MIN, OFFSET_MAX)
+    cfg.lerp = _clamp(float(cfg.lerp), SPEED_CONFIG_MIN, SPEED_CONFIG_MAX)
+    cfg.sleep_after = int(_clamp(int(cfg.sleep_after), SLEEP_AFTER_MIN, SLEEP_AFTER_MAX))
+    return cfg
+
+
 def load() -> Config:
     if not CONFIG_PATH.exists():
         return Config()
@@ -35,7 +53,11 @@ def load() -> Config:
         return Config()
     defaults = asdict(Config())
     defaults.update({k: v for k, v in data.items() if k in defaults})
-    return Config(**defaults)
+    try:
+        cfg = Config(**defaults)
+    except (TypeError, ValueError):
+        return Config()
+    return _sanitize(cfg)
 
 
 def save(config: Config) -> None:

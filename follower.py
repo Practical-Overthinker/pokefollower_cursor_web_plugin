@@ -78,12 +78,22 @@ def step_position(
 
 
 class FollowerWindow(QWidget):
-    def __init__(self, pack: Pack, scale: float, offset: float, lerp: float):
+    def __init__(
+        self,
+        pack: Pack,
+        scale: float,
+        offset: float,
+        lerp: float,
+        sleep_enabled: bool = True,
+        sleep_after: int = 30,
+    ):
         super().__init__()
         self._pack = pack
         self._scale = scale
         self._offset = offset
         self._lerp = lerp
+        self._sleep_enabled = sleep_enabled
+        self._sleep_after_ms = float(sleep_after) * 1000.0
         self._pixmap = QPixmap()
 
         self.setWindowFlags(WINDOW_FLAGS)
@@ -126,6 +136,10 @@ class FollowerWindow(QWidget):
     def set_scale(self, scale: float) -> None:
         self._scale = scale
         self.set_frame(self._anim.name, self._anim.row, self._anim.frame)
+
+    def set_sleep_config(self, enabled: bool, sleep_after: int) -> None:
+        self._sleep_enabled = enabled
+        self._sleep_after_ms = float(sleep_after) * 1000.0
 
     # -- ciclo de vida --------------------------------------------------------
 
@@ -200,8 +214,10 @@ class FollowerWindow(QWidget):
             self._last_cursor = cursor
         # Si no se movió, vel_avg queda congelado en su último valor (fidelidad D-001).
 
-        has_sleep = self._pack.has_state("sleep")
-        desired_state = pick_state_by_speed(now, self._last_move_ts, self._is_walking, has_sleep)
+        has_sleep = self._pack.has_state("sleep") and self._sleep_enabled
+        desired_state = pick_state_by_speed(
+            now, self._last_move_ts, self._is_walking, has_sleep, self._sleep_after_ms
+        )
         self._anim.advance(dt_ms, self._pack.states, desired_state, now, self._vel_avg)
 
         walk_speed = config.walk_speed_from_config(self._lerp)

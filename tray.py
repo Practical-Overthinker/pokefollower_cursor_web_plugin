@@ -13,6 +13,7 @@ ICON_PATH = Path(__file__).parent / "assets" / "icons" / "pokeball-32.png"
 class Tray(QObject):
     enabled_toggled = Signal(bool)
     choose_pokemon_requested = Signal()
+    settings_requested = Signal()
     exit_requested = Signal()
 
     def __init__(self, enabled: bool = True):
@@ -33,6 +34,10 @@ class Tray(QObject):
         choose_action = QAction("Choose Pokémon...", menu)
         choose_action.triggered.connect(self.choose_pokemon_requested)
         menu.addAction(choose_action)
+
+        settings_action = QAction("Settings...", menu)
+        settings_action.triggered.connect(self.settings_requested)
+        menu.addAction(settings_action)
 
         menu.addSeparator()
 
