@@ -15,7 +15,29 @@ ventana transparente y click-through que no bloquea ni interfiere con ninguna ot
 
 No modifica el cursor real de Windows — el Pokémon es un objeto visual independiente.
 
-## Cómo correrlo
+## Instalación (usuario final, sin Python)
+
+1. Descarga `PokeFollower-Setup-1.0.0.exe` (ver [Releases](../../releases) o pídele el
+   archivo a quien te lo compartió).
+2. Ejecútalo y sigue el asistente. No requiere permisos de administrador.
+3. Windows puede mostrar una advertencia de "Editor desconocido" (SmartScreen) — es normal en
+   apps personales sin firma de código pagada. Clic en "Más información" → "Ejecutar de
+   todas formas".
+4. Al terminar, PokéFollower arranca directo al System Tray (junto al reloj, puede estar en
+   los íconos ocultos ^). Verás un aviso confirmando que está corriendo.
+
+Clic derecho en el ícono del tray para:
+
+- **Enabled** — activar/desactivar el follower.
+- **Choose Pokémon...** — elegir entre los 493 Pokémon disponibles (búsqueda + miniaturas).
+- **Settings...** — ajustar escala, velocidad de seguimiento, distancia y comportamiento de
+  `sleep`, todo con efecto en vivo.
+- **Exit** — cerrar la app.
+
+Para desinstalar: Configuración de Windows → Aplicaciones → PokéFollower → Desinstalar (tus
+preferencias en `%APPDATA%\PokeFollower` se conservan por si reinstalas).
+
+## Desarrollo (correr desde el código fuente)
 
 ```bash
 python -m venv .venv
@@ -24,19 +46,20 @@ pip install -r requirements.txt
 python main.py
 ```
 
-La app arranca directo al System Tray, sin ventana principal. Clic derecho en el ícono para:
+Requisitos: Windows, Python 3.11+, PySide6 (Qt 6).
 
-- **Enabled** — activar/desactivar el follower.
-- **Choose Pokémon...** — elegir entre los 493 Pokémon disponibles (búsqueda + miniaturas).
-- **Settings...** — ajustar escala, velocidad de seguimiento, distancia y comportamiento de
-  `sleep`, todo con efecto en vivo.
-- **Exit** — cerrar la app.
+## Reconstruir el instalador
 
-## Requisitos
+Requiere además `requirements-dev.txt` (PyInstaller, Pillow) e
+[Inno Setup](https://jrsoftware.org/isdl.php) instalado:
 
-- Windows
-- Python 3.11+
-- PySide6 (Qt 6)
+```bash
+pip install -r requirements-dev.txt
+powershell -ExecutionPolicy Bypass -File tools\build.ps1
+```
+
+Genera `installer/Output/PokeFollower-Setup-1.0.0.exe`. Ver [`CLAUDE.md`](CLAUDE.md) para el
+detalle de qué hace cada paso del pipeline.
 
 ## Créditos
 

@@ -12,12 +12,14 @@ todo el escritorio de Windows, como proceso en background controlado desde el Sy
 ventana principal. No modifica el cursor real de Windows — el Pokémon es una ventana propia,
 transparente y click-through que se mueve encima del escritorio.
 
-**Estado actual: v1 funcional.** El código de la extensión Chrome original vive intacto en
-`reference/` (solo lectura, no se ejecuta). La app de escritorio en Python/PySide6 está
-implementada y validada en Windows real: ventana transparente click-through, seguimiento de
-cursor con suavizado, 8 direcciones, idle/walk/sleep, tray con selector de 493 Pokémon y
-Settings con efecto en vivo. Historial completo del port (decisiones, validaciones,
-divergencias) en `workbench/desktop-port/` (no versionado, local a cada sesión de trabajo).
+**Estado actual: v1 funcional, distribuible.** El código de la extensión Chrome original vive
+intacto en `reference/` (solo lectura, no se ejecuta). La app de escritorio en Python/PySide6
+está implementada y validada en Windows real: ventana transparente click-through, seguimiento
+de cursor con suavizado, 8 direcciones, idle/walk/sleep, tray con selector de 493 Pokémon y
+Settings con efecto en vivo. Además, la app se empaqueta con PyInstaller y se distribuye como
+instalador Windows con Inno Setup — un usuario sin Python instalado puede instalarla con doble
+clic. Historial completo del port (`workbench/desktop-port/`) y del ciclo de empaquetado
+(`workbench/windows-packaging/`) — ambos no versionados, locales a cada sesión de trabajo.
 
 ## Stack tecnológico
 
@@ -32,8 +34,15 @@ divergencias) en `workbench/desktop-port/` (no versionado, local a cada sesión 
   spritesheets y generación del índice de packs. `add_pokemon.py` en la raíz los invoca.
 
 No introducir TypeScript, frameworks de UI web, ni gestores de paquetes Python alternativos
-(poetry, uv) sin discutirlo antes — la decisión de venv+pip es deliberada por simplicidad,
-dado que es un proyecto personal sin distribución.
+(poetry, uv) sin discutirlo antes — la decisión de venv+pip es deliberada por simplicidad.
+
+**Empaquetado (distribución a usuarios sin Python):**
+- PyInstaller (`requirements-dev.txt`) — empaqueta el intérprete + PySide6 + assets en
+  `dist/PokeFollower/` (onedir, no onefile — ver gotchas).
+- Pillow (`requirements-dev.txt`) — solo para `tools/make_icon.py`. El plugin ICO de Qt no
+  sirve para esto (ver gotchas); no se usa Pillow en ningún otro lugar del proyecto.
+- Inno Setup (herramienta externa, no es dependencia de Python) — envuelve el bundle en un
+  instalador Windows estándar (`installer/PokeFollower.iss`).
 
 ## Comandos esenciales
 
@@ -59,10 +68,28 @@ node reference/scripts/build-pack-index.cjs  # regenera assets/packs/index.json
 No hay lint/typecheck/test runner configurado. Si se añaden (ej. `ruff`, `mypy`, `pytest`),
 esta sección debe actualizarse con los comandos exactos.
 
+**Reconstruir el instalador Windows desde cero** (requiere Inno Setup instalado —
+https://jrsoftware.org/isdl.php — y el venv con `requirements-dev.txt`):
+```bash
+pip install -r requirements-dev.txt
+powershell -ExecutionPolicy Bypass -File tools\build.ps1
+```
+Esto encadena: `tools/make_icon.py` (regenera el `.ico`) → `pyinstaller PokeFollower.spec`
+(genera `dist/PokeFollower/`) → `PokeFollower.exe --self-check` (verifica el bundle antes de
+seguir — si falla, no se genera el instalador) → `ISCC installer/PokeFollower.iss` (genera
+`installer/Output/PokeFollower-Setup-1.0.0.exe`). `tools/build.ps1` resuelve la ruta de
+`ISCC.exe` dinámicamente (prueba varias versiones de Inno Setup conocidas) en vez de asumir
+una ubicación fija.
+
+Verificar el bundle manualmente sin reconstruirlo:
+```bash
+dist\PokeFollower\PokeFollower.exe --self-check
+```
+
 ## Arquitectura y mapa del repositorio
 
 ```
-main.py          # QApplication, lifecycle, wiring de componentes, shutdown
+main.py          # QApplication, lifecycle, wiring de componentes, shutdown, --self-check
 tray.py          # QSystemTrayIcon, QMenu (Enabled, Choose Pokémon..., Settings..., Exit)
 follower.py      # ventana transparente click-through, cursor tracking, movement loop, tick()
 animation.py     # estado de animación: frames, idle/walk/sleep, direcciones (sin Qt)
@@ -70,11 +97,16 @@ pokemon.py       # descubrimiento de packs (load_index), lectura de JSON, carga 
 selector.py      # diálogo de selección de Pokémon (búsqueda + rejilla de miniaturas)
 settings.py      # diálogo de ajustes (scale/speed/distance/sleep) con efecto en vivo
 config.py        # defaults, load/save/clamps de config.json
+paths.py         # resolución de rutas: único módulo que conoce sys.frozen/sys._MEIPASS
+selfcheck.py     # verificación post-build del bundle congelado (--self-check)
 check_packs.py   # diagnóstico: carga los 493 packs y reporta fallos
-config.json      # persistencia local del usuario (no versionar cambios personales)
+config.json      # persistencia local del usuario (raíz en dev; %APPDATA% si congelado)
 assets/          # packs y sprites, fuente única para el runtime
 reference/       # código legado de la extensión Chrome, solo lectura/consulta
-workbench/       # historial de planificación/ejecución del port (no versionado)
+tools/           # make_icon.py (genera el .ico), build.ps1 (pipeline de build completo)
+installer/       # PokeFollower.iss (Inno Setup); Output/ es artefacto, no se versiona
+PokeFollower.spec  # config de PyInstaller (qué se empaqueta, qué se excluye)
+workbench/       # historial de planificación/ejecución (no versionado)
 ```
 
 **Flujo de datos del loop principal** (`FollowerWindow._tick()`, cada ~16ms):
@@ -114,8 +146,12 @@ workbench/       # historial de planificación/ejecución del port (no versionad
 - No copiar infraestructura de Chrome (`chrome.storage`, `chrome.runtime`, DOM, popup HTML,
   `requestAnimationFrame`) al puerto Python — solo la semántica de movimiento/animación.
 - Mantener el scope acotado a lo listado en el handoff original: sin ataques, emotes,
-  multi-follower, packaging/instalador, ni catálogo online. Autostart de Windows sigue fuera
-  de scope. No expandir scope sin confirmarlo con el usuario primero.
+  multi-follower, ni catálogo online. Empaquetado/instalador y autostart (vía instalador, no
+  vía Python) ya están dentro de scope — ver `workbench/windows-packaging/`. No expandir scope
+  más allá sin confirmarlo con el usuario primero.
+- `paths.py` es el único módulo que puede referenciar `sys.frozen`/`sys._MEIPASS`/`__file__`
+  para resolución de rutas. Ningún otro módulo de runtime debe construir sus propias rutas a
+  `assets/` o `config.json` — todos pasan por `paths.assets_dir()`/`paths.config_dir()`.
 - El formato JSON por-Pokémon (`assets/packs/**/*.json`) no se reestructura salvo necesidad
   fuerte — el objetivo es "mismos assets + mismos JSON + runtime diferente".
 - `reference/` es solo lectura/consulta. No se ejecuta ni se mantiene funcionalmente; solo se
@@ -197,8 +233,23 @@ Si se extraen más funciones puras en el futuro, son candidatas naturales a unit
   deliberadamente a favor de polling con `QTimer` + ventana pequeña. Si surge la tentación de
   "arreglar" latencia con un hook global, es un cambio de arquitectura que debe discutirse.
 - **Licencia de los sprites**: los assets de `assets/packs/` vienen de PMD Sprite Repository
-  bajo CC-BY-NC-SA 4.0 (ver `CREDITS.txt`). Uso personal está bien; cualquier intención de
-  distribuir públicamente el proyecto requiere revisar la licencia antes.
+  bajo CC-BY-NC-SA 4.0 (NonCommercial + ShareAlike). El instalador distribuye estos assets, así
+  que `LICENSE.txt` (MIT del código + CC-BY-NC-SA de los sprites) viaja obligatoriamente con
+  él — no quitarlo del `.iss`. Nunca uso comercial.
+- **El plugin ICO de Qt (`QImageWriter`) NO soporta escribir múltiples resoluciones en un solo
+  archivo**, pese a reportar `ico` como formato soportado — se comprobó empíricamente que trunca
+  a una sola imagen (header `ICONDIR.count=1`). `tools/make_icon.py` usa Pillow en su lugar, con
+  la imagen más grande como base (Pillow solo *reduce* desde el base, nunca amplía) y las
+  menores vía `append_images` ya en su tamaño exacto para que se embeban sin remuestreo.
+- **Los `.xml` de `assets/raw/` (AnimData) no se empaquetan** en el bundle de PyInstaller —
+  solo los lee `add_pokemon.py` (authoring), nunca el runtime. `PokeFollower.spec` los excluye
+  explícitamente al recolectar `datas`.
+- **Nunca excluir los plugins de imagen de Qt (`imageformats`) al ajustar `PokeFollower.spec`**:
+  los spritesheets son `.webp`. Excluir `qwebp` deja todos los sprites invisibles sin ningún
+  error — ni al construir el bundle ni al correrlo. Los `excludes` del `.spec` solo tocan
+  módulos Qt (`QtNetwork`, `QtQml`, etc.), nunca el directorio de plugins de imagen.
+- **`config.save()` nunca debe volver a perder su `try/except`**: se invoca en cada movimiento
+  de slider de Settings (`main.py`); un `OSError` ahí no debe crashear la app.
 
 ## Definition of Done
 
@@ -215,6 +266,10 @@ Antes de dar un cambio por terminado:
   alteró la semántica de `rows`/`frame`/`fps`/`frames` sin motivo.
 - `config.json` de ejemplo/plantilla no contiene datos personales o de sesión que no deban
   versionarse (de hecho, `config.json` está en `.gitignore` — no debería aparecer en `git status`).
+- Si se tocó `paths.py`, `PokeFollower.spec`, o cualquier ruta de `assets/`/`config.json`:
+  reconstruir el bundle (`tools/build.ps1`) y confirmar que `--self-check` sigue en verde antes
+  de dar el cambio por terminado — un fallo aquí suele ser silencioso en la UI (icono vacío,
+  miniatura ausente), no un crash.
 
 No hay hooks/CI configurados que hagan cumplir esto automáticamente — por ahora es disciplina
 manual. Si se añade lint/typecheck/test runner, considerar un hook de pre-commit y actualizar
