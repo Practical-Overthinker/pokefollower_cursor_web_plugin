@@ -127,4 +127,8 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    if "--self-check" in sys.argv:
+        import selfcheck
+
+        sys.exit(selfcheck.main())
     sys.exit(main())
