@@ -1,13 +1,13 @@
 """System tray: icono, menú, acciones. No toca posición ni frames, solo emite señales."""
 from __future__ import annotations
 
-from pathlib import Path
-
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QAction, QIcon
 from PySide6.QtWidgets import QMenu, QSystemTrayIcon
 
-ICON_PATH = Path(__file__).parent / "assets" / "icons" / "pokeball-32.png"
+import paths
+
+ICON_PATH = paths.assets_dir() / "icons" / "pokeball-32.png"
 
 
 class Tray(QObject):

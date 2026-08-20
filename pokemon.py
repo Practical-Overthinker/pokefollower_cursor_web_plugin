@@ -9,7 +9,9 @@ from typing import Optional
 from PySide6.QtCore import QRect
 from PySide6.QtGui import QPixmap
 
-ASSETS_DIR = Path(__file__).parent / "assets"
+import paths
+
+ASSETS_DIR = paths.assets_dir()
 PACKS_DIR = ASSETS_DIR / "packs"
 RAW_DIR = ASSETS_DIR / "raw"
 UI_DIR = ASSETS_DIR / "ui"

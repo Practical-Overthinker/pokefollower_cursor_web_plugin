@@ -3,9 +3,10 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict, dataclass
-from pathlib import Path
 
-CONFIG_PATH = Path(__file__).parent / "config.json"
+import paths
+
+CONFIG_PATH = paths.config_dir() / "config.json"
 
 # Rango del slider de velocidad (llamado "lerp" en el original por legado, no es un lerp).
 SPEED_CONFIG_MIN = 0.05
@@ -28,7 +29,6 @@ class Config:
     lerp: float = 0.20
     sleep: bool = True
     sleep_after: int = 30
-    start_with_windows: bool = False
 
 
 def _clamp(value: float, lo: float, hi: float) -> float:
@@ -61,7 +61,12 @@ def load() -> Config:
 
 
 def save(config: Config) -> None:
-    CONFIG_PATH.write_text(json.dumps(asdict(config), indent=2), encoding="utf-8")
+    try:
+        CONFIG_PATH.write_text(json.dumps(asdict(config), indent=2), encoding="utf-8")
+    except OSError:
+        # No hay forma de mostrarle esto al usuario desde aquí (config.py no toca Qt).
+        # Preferible perder la persistencia de este cambio a tumbar la app en cada slider.
+        pass
 
 
 def walk_speed_from_config(lerp: float) -> float:

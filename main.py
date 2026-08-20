@@ -5,7 +5,7 @@ import sys
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QGuiApplication
-from PySide6.QtWidgets import QApplication, QDialog
+from PySide6.QtWidgets import QApplication, QDialog, QMessageBox
 
 import config
 from follower import FollowerWindow
@@ -28,7 +28,11 @@ def main() -> int:
     try:
         pack = load_pack(cfg.pokemon)
     except PackLoadError as exc:
-        print(f"Error cargando pack '{cfg.pokemon}': {exc}", file=sys.stderr)
+        QMessageBox.critical(
+            None,
+            "PokéFollower",
+            f"No se pudo cargar el Pokémon '{cfg.pokemon}':\n{exc}",
+        )
         return 1
 
     window = FollowerWindow(
@@ -65,7 +69,11 @@ def main() -> int:
         try:
             new_pack = load_pack(new_id)
         except PackLoadError as exc:
-            print(f"Error cargando pack '{new_id}': {exc}", file=sys.stderr)
+            QMessageBox.warning(
+                None,
+                "PokéFollower",
+                f"No se pudo cargar el Pokémon '{new_id}':\n{exc}\n\nSe mantiene el anterior.",
+            )
             return
         cfg.pokemon = new_id
         config.save(cfg)

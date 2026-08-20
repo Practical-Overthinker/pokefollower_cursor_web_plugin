@@ -18,3 +18,8 @@ config.json
 
 # Session workbench (scratch, not shared project guidance)
 workbench/
+
+# PyInstaller / Inno Setup build artifacts (regenerados por tools/build.ps1)
+build/
+dist/
+installer/Output/
