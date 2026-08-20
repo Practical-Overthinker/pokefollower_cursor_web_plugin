@@ -1,7 +1,4 @@
-"""Fase 1: ventana transparente click-through con un sprite estático.
-
-Sin tray, sin movimiento. Cerrar con Ctrl+C en la consola.
-"""
+"""Fase 2: el Pokémon sigue el cursor. Tray mínimo (Enabled, Exit)."""
 from __future__ import annotations
 
 import sys
@@ -13,6 +10,7 @@ from PySide6.QtWidgets import QApplication
 import config
 from follower import FollowerWindow
 from pokemon import PackLoadError, load_pack
+from tray import Tray
 
 
 def main() -> int:
@@ -21,6 +19,7 @@ def main() -> int:
     )
 
     app = QApplication(sys.argv)
+    app.setQuitOnLastWindowClosed(False)
 
     cfg = config.load()
 
@@ -30,12 +29,34 @@ def main() -> int:
         print(f"Error cargando pack '{cfg.pokemon}': {exc}", file=sys.stderr)
         return 1
 
-    window = FollowerWindow(pack, scale=cfg.scale)
+    window = FollowerWindow(pack, scale=cfg.scale, offset=cfg.offset, lerp=cfg.lerp)
     window.show()
-    # Tras show(), la ventana ya tiene un windowHandle real y devicePixelRatioF()
-    # refleja el monitor correcto; se recalcula el frame para nitidez en DPI fraccional.
     window.set_frame("idle", 0, 0)
     window.place_at_startup_position()
+
+    tray = Tray(enabled=cfg.enabled)
+
+    def on_enabled_toggled(enabled: bool) -> None:
+        cfg.enabled = enabled
+        config.save(cfg)
+        if enabled:
+            window.show()
+            window.start()
+        else:
+            window.stop()
+            window.hide()
+
+    def on_exit_requested() -> None:
+        window.stop()
+        app.quit()
+
+    tray.enabled_toggled.connect(on_enabled_toggled)
+    tray.exit_requested.connect(on_exit_requested)
+
+    if cfg.enabled:
+        window.start()
+    else:
+        window.hide()
 
     return app.exec()
 
