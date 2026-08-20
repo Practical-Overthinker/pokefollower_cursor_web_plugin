@@ -1,0 +1,4 @@
+interface:
+  display_name: "Execute Plan Phase"
+  short_description: "Ejecuta y reconcilia fases de un plan"
+  default_prompt: "Usa $execute-plan-phase para ejecutar la siguiente fase autorizada del plan."

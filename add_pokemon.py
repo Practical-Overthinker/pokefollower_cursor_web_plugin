@@ -27,9 +27,9 @@ from pathlib import Path
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
 VSCODE_ROOT  = Path("/Users/alihamad/Documents/GitHub/pokefollower_cursor_web_plugin")
-VSCODE_RAW   = VSCODE_ROOT / "src/assets/raw"
-VSCODE_UI    = VSCODE_ROOT / "src/assets/ui"
-VSCODE_PACKS = VSCODE_ROOT / "src/assets/packs/retro"
+VSCODE_RAW   = VSCODE_ROOT / "assets/raw"
+VSCODE_UI    = VSCODE_ROOT / "assets/ui"
+VSCODE_PACKS = VSCODE_ROOT / "assets/packs/retro"
 
 PROJECTS     = Path("/Users/alihamad/Desktop/PROJECTS/Pokefollower Plugin/Pokemon")
 INCOMING     = PROJECTS / "incoming"
@@ -212,12 +212,12 @@ def run_parse_anim(dex_num, name, gen):
     log(f"FPS - Idle:{frames['Idle']} Walk:{frames['Walk']} Sleep:{frames['Sleep']}")
 
     cmd = [
-        "node", "src/scripts/parse-anim.js",
-        "--xml",        f"src/assets/raw/{g}/{mon}/AnimData.xml",
-        "--dir",        f"src/assets/raw/{g}/{mon}",
+        "node", "reference/scripts/parse-anim.js",
+        "--xml",        f"assets/raw/{g}/{mon}/AnimData.xml",
+        "--dir",        f"assets/raw/{g}/{mon}",
         "--name",       mon,
         "--generation", g,
-        "--out",        f"src/assets/packs/retro/{g}/{mon}.json",
+        "--out",        f"assets/packs/retro/{g}/{mon}.json",
         "--idle",       "Idle-Anim.webp",
         "--walk",       "Walk-Anim.webp",
         "--sleep",      "Sleep-Anim.webp",
@@ -230,7 +230,7 @@ def run_parse_anim(dex_num, name, gen):
     if result.returncode != 0:
         print(f"    stderr: {result.stderr.strip()}")
         err(f"parse-anim.js failed for {mon}")
-    ok(f"JSON generated -> src/assets/packs/retro/{g}/{mon}.json")
+    ok(f"JSON generated -> assets/packs/retro/{g}/{mon}.json")
 
 
 def process_pokemon(dex_num, name, gen):
@@ -274,11 +274,11 @@ def process_pokemon(dex_num, name, gen):
     raw_dir.mkdir(parents=True, exist_ok=True)
     for f in ["AnimData.xml", "Idle-Anim.webp", "Sleep-Anim.webp", "Walk-Anim.webp"]:
         shutil.copy2(temp_dir / f, raw_dir / f)
-    ok(f"Copied 4 files -> src/assets/raw/{g}/{mon}/")
+    ok(f"Copied 4 files -> assets/raw/{g}/{mon}/")
 
     # Copy cover PNG to VS Code UI folder
     shutil.copy2(cover_png, VSCODE_UI / g / cover_png.name)
-    ok(f"Copied cover -> src/assets/ui/{g}/{cover_png.name}")
+    ok(f"Copied cover -> assets/ui/{g}/{cover_png.name}")
 
     # Run parse-anim.js
     run_parse_anim(dex_num, name, gen)
@@ -299,7 +299,7 @@ def run_build_index():
     if result.returncode != 0:
         print(f"    stderr: {result.stderr.strip()}")
         err("build:index failed")
-    ok("Index rebuilt -> src/assets/packs/index.json")
+    ok("Index rebuilt -> assets/packs/index.json")
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 

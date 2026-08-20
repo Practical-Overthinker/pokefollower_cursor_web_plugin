@@ -1,0 +1,4 @@
+interface:
+  display_name: "Plan Long Change"
+  short_description: "Convierte handoffs amplios en planes por fases"
+  default_prompt: "Usa $plan-long-change para convertir este handoff en un plan ejecutable por fases."

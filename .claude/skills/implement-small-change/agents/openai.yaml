@@ -1,0 +1,4 @@
+interface:
+  display_name: "Implement Small Change"
+  short_description: "Implementa y valida cambios acotados"
+  default_prompt: "Usa $implement-small-change para implementar y validar este cambio acotado."

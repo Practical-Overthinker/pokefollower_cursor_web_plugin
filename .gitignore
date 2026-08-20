@@ -7,4 +7,14 @@ node_modules/
 npm-debug.log*
 yarn.lock
 pnpm-lock.yaml
-CLAUDE.md
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Local runtime state
+config.json
+
+# Session workbench (scratch, not shared project guidance)
+workbench/
