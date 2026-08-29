@@ -11,6 +11,10 @@
 ; AppId fijo — NUNCA cambiar entre versiones: es la identidad para upgrades y
 ; desinstalación. Cambiarlo produce una entrada duplicada en Programas y características.
 AppId={{9D6B59FE-F850-4412-923B-A03E4D593945}
+; Mismo nombre de mutex que crea la app en single_instance.py (MUTEX_NAME). Permite que
+; el instalador/desinstalador detecte una instancia en marcha y pida cerrarla. NO depende
+; de la versión: idéntico entre releases.
+AppMutex=PokeFollowerDesktop
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}

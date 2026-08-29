@@ -8,6 +8,7 @@ from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QApplication, QDialog, QMessageBox
 
 import config
+import single_instance
 from follower import FollowerWindow
 from pokemon import PackLoadError, load_pack
 from selector import PokemonSelectorDialog
@@ -16,6 +17,11 @@ from tray import Tray
 
 
 def main() -> int:
+    # Instancia única: un segundo lanzamiento (Startup + menú Inicio + doble clic al .exe)
+    # sale en silencio con éxito, sin abrir otra ventana ni otro icono de bandeja.
+    if single_instance.already_running():
+        return 0
+
     QGuiApplication.setHighDpiScaleFactorRoundingPolicy(
         Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
     )
