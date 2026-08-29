@@ -55,9 +55,11 @@ def load() -> Config:
     defaults.update({k: v for k, v in data.items() if k in defaults})
     try:
         cfg = Config(**defaults)
+        return _sanitize(cfg)
     except (TypeError, ValueError):
+        # Tipo incompatible en el JSON (p.ej. scale: "grande" tras editarlo a mano):
+        # _sanitize hace float()/int() y puede reventar. Fallback completo a defaults.
         return Config()
-    return _sanitize(cfg)
 
 
 def save(config: Config) -> None:

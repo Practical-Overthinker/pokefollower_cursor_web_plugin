@@ -6,3 +6,6 @@ pyinstaller==6.22.2
 # Generación del .ico multi-resolución (tools/make_icon.py). QImageWriter de Qt no soporta
 # escribir múltiples resoluciones en un solo .ico — ver decision.log del ciclo de empaquetado.
 Pillow==12.3.0
+
+# Suite de regresión (tests/). Ver CLAUDE.md sección Testing.
+pytest==9.1.1

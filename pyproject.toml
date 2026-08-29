@@ -1,0 +1,7 @@
+# Configuración de herramientas de desarrollo. El runtime sigue siendo venv + pip
+# (requirements.txt / requirements-dev.txt) — esto NO introduce poetry/uv, solo
+# configura pytest. Ver CLAUDE.md.
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

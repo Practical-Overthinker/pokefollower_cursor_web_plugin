@@ -12,6 +12,8 @@ pnpm-lock.yaml
 .venv/
 __pycache__/
 *.pyc
+.pytest_cache/
+.pytmp/
 
 # Local runtime state
 config.json

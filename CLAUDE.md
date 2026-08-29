@@ -65,8 +65,14 @@ node reference/scripts/parse-anim.js       # parsea spritesheets crudos -> JSON 
 node reference/scripts/build-pack-index.cjs  # regenera assets/packs/index.json
 ```
 
-No hay lint/typecheck/test runner configurado. Si se añaden (ej. `ruff`, `mypy`, `pytest`),
-esta sección debe actualizarse con los comandos exactos.
+Suite de regresión (funciones puras de animación/movimiento/config/parseo de packs):
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+
+No hay lint/typecheck configurado. Si se añaden (ej. `ruff`, `mypy`), esta sección debe
+actualizarse con los comandos exactos.
 
 **Reconstruir el instalador Windows desde cero** (requiere Inno Setup instalado —
 https://jrsoftware.org/isdl.php — y el venv con `requirements-dev.txt`):
@@ -179,9 +185,26 @@ workbench/       # historial de planificación/ejecución (no versionado)
 
 ## Testing
 
-No hay framework de testing configurado. La mayor parte del comportamiento crítico (ventana
-transparente, click-through, always-on-top, DPI scaling, multi-monitor) es difícil de cubrir
-con unit tests y requiere verificación manual en Windows real:
+Suite `pytest` en `tests/` (~74 tests, <1 s). Cubre **solo lógica pura**, sin abrir ventanas:
+
+- `test_animation.py` — `pick_dir8_from_vector` (8 direcciones + zona muerta, vectores
+  cruzados contra `reference/content.js`), `pick_row_for_state` (fallback diagonal→cardinal),
+  `pick_state_by_speed` (idle/walk/sleep, prioridad de sleep, timeout configurable),
+  `AnimationState.advance` (conmutación en fin de ciclo o timeout 300 ms; frame NO se
+  resetea — D-001).
+- `test_movement.py` — `walk_speed_from_config` (límites + clamp), `compute_target` (umbral
+  de arrastre 40 px/s, `offset_dir` sin renormalizar — D-001), `step_position` (radios de
+  llegada/frenado, clamp de dt).
+- `test_config.py` — defaults, JSON malformado → defaults, claves faltantes/desconocidas,
+  clamps de `_sanitize`, tipo incompatible → fallback, `save()` tolera `OSError`. Aísla
+  `config.CONFIG_PATH` a un tmp: **nunca** toca el `config.json` real.
+- `test_pokemon.py` — parseo de packs representativos (Blastoise, Dragonair y su
+  indirección `sheet`), catálogo de 493 entradas, caminos de error de `_parse_state`.
+
+`conftest.py` levanta un `QGuiApplication` en modo `offscreen` (necesario para `QPixmap`).
+
+La suite **no** cubre lo dependiente de Windows real (ventana transparente, click-through,
+always-on-top, DPI scaling, multi-monitor) — eso sigue requiriendo verificación manual:
 
 - Verificar visualmente que el follower sigue el cursor con el suavizado esperado.
 - Verificar que no bloquea clicks/drag/scroll sobre otras ventanas.
@@ -194,8 +217,7 @@ con unit tests y requiere verificación manual en Windows real:
 cercano a un test de regresión de datos: carga los 493 packs y valida que cada sheet existe y
 que ninguna fila/frame se sale de los límites del spritesheet.
 
-Si se extraen más funciones puras en el futuro, son candidatas naturales a unit tests con
-`pytest` — actualizar esta sección si se añade esa infraestructura.
+Si se extraen más funciones puras en el futuro, son candidatas naturales a añadir a la suite.
 
 ## Gotchas y patrones no obvios
 
