@@ -3,8 +3,13 @@
 ; Requiere que dist\PokeFollower\ ya exista (salida de PyInstaller, Fase 2).
 
 #define MyAppName "PokéFollower"
-#define MyAppVersion "1.0.0"
-#define MyAppPublisher "PokéFollower Desktop (fork personal, no comercial)"
+; Versión semántica: única fuente en version.py (raíz del repo). tools/build.ps1 la lee
+; de ahí y avisa si este valor no coincide. El tag git es "v" + este string.
+#define MyAppVersion "0.1.0-beta.1"
+; Equivalente numérico x.x.x.x que exige Windows para los recursos de versión del .exe
+; del instalador (coincide con version.__version_tuple__).
+#define MyAppVersionNumeric "0.1.0.1"
+#define MyAppPublisher "PokéFollower Desktop (unofficial, non-commercial fan project)"
 #define MyAppExeName "PokeFollower.exe"
 
 [Setup]
@@ -29,6 +34,9 @@ DisableProgramGroupPage=yes
 LicenseFile=..\LICENSE.txt
 OutputDir=Output
 OutputBaseFilename=PokeFollower-Setup-{#MyAppVersion}
+VersionInfoVersion={#MyAppVersionNumeric}
+VersionInfoProductVersion={#MyAppVersionNumeric}
+VersionInfoProductTextVersion={#MyAppVersion}
 SetupIconFile=..\assets\icons\pokeball.ico
 Compression=lzma2/max
 SolidCompression=yes

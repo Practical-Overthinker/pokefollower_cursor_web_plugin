@@ -83,9 +83,10 @@ powershell -ExecutionPolicy Bypass -File tools\build.ps1
 Esto encadena: `tools/make_icon.py` (regenera el `.ico`) → `pyinstaller PokeFollower.spec`
 (genera `dist/PokeFollower/`) → `PokeFollower.exe --self-check` (verifica el bundle antes de
 seguir — si falla, no se genera el instalador) → `ISCC installer/PokeFollower.iss` (genera
-`installer/Output/PokeFollower-Setup-1.0.0.exe`). `tools/build.ps1` resuelve la ruta de
-`ISCC.exe` dinámicamente (prueba varias versiones de Inno Setup conocidas) en vez de asumir
-una ubicación fija.
+`installer/Output/PokeFollower-Setup-<version>.exe` + `SHA256SUMS.txt`). La versión sale de
+`version.py` (fuente única); `build.ps1` aborta si `PokeFollower.iss` no coincide con ella.
+`tools/build.ps1` resuelve la ruta de `ISCC.exe` dinámicamente (prueba varias versiones de
+Inno Setup conocidas) en vez de asumir una ubicación fija.
 
 Verificar el bundle manualmente sin reconstruirlo:
 ```bash
@@ -104,8 +105,11 @@ selector.py      # diálogo de selección de Pokémon (búsqueda + rejilla de mi
 settings.py      # diálogo de ajustes (scale/speed/distance/sleep) con efecto en vivo
 config.py        # defaults, load/save/clamps de config.json
 paths.py         # resolución de rutas: único módulo que conoce sys.frozen/sys._MEIPASS
+version.py       # fuente única de la versión (semántica + tupla numérica PE)
+single_instance.py  # mutex con nombre: impide dos procesos a la vez (Windows, ctypes)
 selfcheck.py     # verificación post-build del bundle congelado (--self-check)
 check_packs.py   # diagnóstico: carga los 493 packs y reporta fallos
+tests/           # suite pytest de lógica pura (animación, movimiento, config, packs)
 config.json      # persistencia local del usuario (raíz en dev; %APPDATA% si congelado)
 assets/          # packs y sprites, fuente única para el runtime
 reference/       # código legado de la extensión Chrome, solo lectura/consulta

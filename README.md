@@ -17,7 +17,7 @@ No modifica el cursor real de Windows — el Pokémon es un objeto visual indepe
 
 ## Instalación (usuario final, sin Python)
 
-1. Descarga `PokeFollower-Setup-1.0.0.exe` (ver [Releases](../../releases) o pídele el
+1. Descarga `PokeFollower-Setup-0.1.0-beta.1.exe` (ver [Releases](../../releases) o pídele el
    archivo a quien te lo compartió).
 2. Ejecútalo y sigue el asistente. No requiere permisos de administrador.
 3. Windows puede mostrar una advertencia de "Editor desconocido" (SmartScreen) — es normal en
@@ -58,7 +58,7 @@ pip install -r requirements-dev.txt
 powershell -ExecutionPolicy Bypass -File tools\build.ps1
 ```
 
-Genera `installer/Output/PokeFollower-Setup-1.0.0.exe`. Ver [`CLAUDE.md`](CLAUDE.md) para el
+Genera `installer/Output/PokeFollower-Setup-0.1.0-beta.1.exe`. Ver [`CLAUDE.md`](CLAUDE.md) para el
 detalle de qué hace cada paso del pipeline.
 
 ## Créditos

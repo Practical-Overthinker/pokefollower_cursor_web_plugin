@@ -98,8 +98,10 @@ def main() -> int:
     app = QApplication(sys.argv)  # QImageReader/QPixmap necesitan una QGuiApplication activa
     del app  # no se usa más allá de inicializar Qt; no se crea ninguna ventana
 
+    import version
+
     results = run_checks()
-    lines = ["PokéFollower — self-check", ""]
+    lines = [f"PokéFollower {version.__version__} — self-check", ""]
     all_ok = True
     for r in results:
         status = "OK  " if r.passed else "FAIL"

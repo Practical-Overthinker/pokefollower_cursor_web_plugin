@@ -16,6 +16,9 @@ if ($LASTEXITCODE -ne 0) { throw "make_icon.py fallo" }
 Write-Host "== 2/3: Build de PyInstaller (onedir) ==" -ForegroundColor Cyan
 if (Test-Path "build") { Remove-Item -Recurse -Force "build" }
 if (Test-Path "dist") { Remove-Item -Recurse -Force "dist" }
+# Instaladores viejos fuera: la RC debe salir de un estado limpio y sin .exe de versiones
+# anteriores en Output/ (todo Output/ esta en .gitignore).
+if (Test-Path "installer\Output") { Remove-Item -Recurse -Force "installer\Output" }
 python -m PyInstaller PokeFollower.spec --noconfirm
 if ($LASTEXITCODE -ne 0) { throw "PyInstaller fallo" }
 
@@ -41,5 +44,24 @@ Write-Host "Usando: $iscc"
 & $iscc "installer\PokeFollower.iss"
 if ($LASTEXITCODE -ne 0) { throw "ISCC (Inno Setup) fallo" }
 
+# Version: unica fuente en version.py. El .iss debe coincidir con ella.
+$ver = (& python -c "import version; print(version.__version__)").Trim()
+if ($LASTEXITCODE -ne 0) { throw "no se pudo leer version.py" }
+$issVer = (Select-String -Path "installer\PokeFollower.iss" -Pattern '^#define MyAppVersion "(.+)"').Matches[0].Groups[1].Value
+if ($ver -ne $issVer) {
+    throw "Descuadre de version: version.py='$ver' pero PokeFollower.iss='$issVer'. Sincronizalos."
+}
+
+$installer = "installer\Output\PokeFollower-Setup-$ver.exe"
+if (-not (Test-Path $installer)) { throw "no se genero el instalador esperado: $installer" }
+
+# SHA-256 junto al instalador (formato 'hash  nombre', como sha256sum).
+$hash = (Get-FileHash $installer -Algorithm SHA256).Hash.ToLower()
+$sha = "installer\Output\SHA256SUMS.txt"
+"$hash  PokeFollower-Setup-$ver.exe" | Out-File -FilePath $sha -Encoding ascii
+$sizeMB = [math]::Round((Get-Item $installer).Length / 1MB, 1)
+
 Write-Host ""
-Write-Host "Listo: installer\Output\PokeFollower-Setup-1.0.0.exe" -ForegroundColor Green
+Write-Host "Listo: $installer  ($sizeMB MB)" -ForegroundColor Green
+Write-Host "SHA-256: $hash" -ForegroundColor Green
+Write-Host "         escrito en $sha" -ForegroundColor Green

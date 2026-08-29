@@ -5,9 +5,47 @@ Build: pyinstaller PokeFollower.spec
 Resultado: dist/PokeFollower/PokeFollower.exe (onedir — ver decision.log del ciclo de
 empaquetado: onefile descomprimiría ~2967 archivos en %TEMP% en cada arranque).
 """
+import sys
 from pathlib import Path
 
+from PyInstaller.utils.win32.versioninfo import (
+    FixedFileInfo,
+    StringFileInfo,
+    StringStruct,
+    StringTable,
+    VarFileInfo,
+    VarStruct,
+    VSVersionInfo,
+)
+
 REPO_ROOT = Path(SPECPATH)  # noqa: F821 (SPECPATH lo inyecta PyInstaller al ejecutar el .spec)
+
+# Versión: única fuente en version.py (ver Phase 4 del ciclo de release).
+sys.path.insert(0, str(REPO_ROOT))
+import version as _version  # noqa: E402
+
+_vt = _version.__version_tuple__
+_version_info = VSVersionInfo(
+    ffi=FixedFileInfo(filevers=_vt, prodvers=_vt),
+    kids=[
+        StringFileInfo([StringTable("040904B0", [
+            # Trabajo de fans, no comercial: NO implicar afiliación con Nintendo/Game Freak/Creatures.
+            StringStruct("CompanyName", "PokéFollower Desktop (unofficial, non-commercial fan project)"),
+            StringStruct("FileDescription", "PokéFollower Desktop — retro Pokémon cursor companion"),
+            StringStruct("FileVersion", _version.__version__),
+            StringStruct("InternalName", "PokeFollower"),
+            StringStruct(
+                "LegalCopyright",
+                "Code: MIT (© Ali Hamad & contributors). Sprites: CC-BY-NC-SA 4.0 "
+                "(PMD Sprite Repository). Not affiliated with Nintendo/Game Freak/Creatures.",
+            ),
+            StringStruct("OriginalFilename", "PokeFollower.exe"),
+            StringStruct("ProductName", "PokéFollower Desktop"),
+            StringStruct("ProductVersion", _version.__version__),
+        ])]),
+        VarFileInfo([VarStruct("Translation", [0x0409, 0x04B0])]),
+    ],
+)
 
 # Recolectar todo assets/ EXCEPTO los .xml de authoring (AnimData, solo los lee
 # add_pokemon.py; nunca el runtime — ver decision.log D-006). No se lista a mano: el
@@ -81,6 +119,7 @@ exe = EXE(
     upx=False,
     console=False,
     icon=str(REPO_ROOT / "assets" / "icons" / "pokeball.ico"),
+    version=_version_info,
 )
 
 coll = COLLECT(

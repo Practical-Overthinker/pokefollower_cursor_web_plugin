@@ -6,6 +6,7 @@ from PySide6.QtGui import QAction, QIcon
 from PySide6.QtWidgets import QMenu, QSystemTrayIcon
 
 import paths
+import version
 
 ICON_PATH = paths.assets_dir() / "icons" / "pokeball-32.png"
 
@@ -19,7 +20,7 @@ class Tray(QObject):
     def __init__(self, enabled: bool = True):
         super().__init__()
         self._icon = QSystemTrayIcon(QIcon(str(ICON_PATH)))
-        self._icon.setToolTip("PokéFollower")
+        self._icon.setToolTip(f"PokéFollower {version.__version__}")
 
         menu = QMenu()
 
