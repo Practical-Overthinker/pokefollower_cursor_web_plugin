@@ -59,7 +59,7 @@ class Tray(QObject):
         """
         self._icon.showMessage(
             "PokéFollower",
-            "Está corriendo aquí, en la bandeja del sistema. Clic derecho para opciones.",
+            "Running here in the system tray. Right-click the icon for options.",
             QSystemTrayIcon.MessageIcon.Information,
             4000,
         )

@@ -37,7 +37,7 @@ def main() -> int:
         QMessageBox.critical(
             None,
             "PokéFollower",
-            f"No se pudo cargar el Pokémon '{cfg.pokemon}':\n{exc}",
+            f"Could not load the Pokémon '{cfg.pokemon}':\n{exc}",
         )
         return 1
 
@@ -79,7 +79,7 @@ def main() -> int:
             QMessageBox.warning(
                 None,
                 "PokéFollower",
-                f"No se pudo cargar el Pokémon '{new_id}':\n{exc}\n\nSe mantiene el anterior.",
+                f"Could not load the Pokémon '{new_id}':\n{exc}\n\nKeeping the previous one.",
             )
             return
         cfg.pokemon = new_id

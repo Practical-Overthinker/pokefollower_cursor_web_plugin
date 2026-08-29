@@ -22,7 +22,7 @@ THUMBNAIL_SIZE = QSize(48, 48)
 class PokemonSelectorDialog(QDialog):
     def __init__(self, current_pack_id: str, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Elegir Pokémon")
+        self.setWindowTitle("Choose Pokémon")
         self.resize(420, 520)
 
         self._entries = load_index()
@@ -31,7 +31,7 @@ class PokemonSelectorDialog(QDialog):
         layout = QVBoxLayout(self)
 
         self._search = QLineEdit()
-        self._search.setPlaceholderText("Buscar por nombre...")
+        self._search.setPlaceholderText("Search by name…")
         self._search.textChanged.connect(self._apply_filter)
         layout.addWidget(self._search)
 

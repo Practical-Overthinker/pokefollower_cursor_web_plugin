@@ -1,64 +1,63 @@
-PokéFollower Desktop — Licencia y atribución
+PokéFollower Desktop — License and attribution
 ==============================================
 
-Este instalador distribuye dos tipos de contenido con licencias distintas: el código
-(MIT) y los sprites de Pokémon (CC-BY-NC-SA 4.0). Al instalar y usar esta aplicación,
-aceptas los términos de ambas.
+This project (and the installer it produces) bundles two kinds of content under two
+different licenses: the code (MIT) and the Pokémon sprite assets (CC-BY-NC-SA 4.0).
+By installing and using this application you accept the terms of both.
 
 ------------------------------------------------------------------------------
-1. Código y diseño — Licencia MIT
+1. Code and design — MIT License
 ------------------------------------------------------------------------------
 
-PokéFollower Desktop es un fork conceptual, para uso personal y sin fines comerciales,
-de la extensión de Chrome "PokéFollower" (pokefollower_cursor_web_plugin), creada
-originalmente por Ali Hamad (ThinkrDoer).
+PokéFollower Desktop is an unofficial, non-commercial fan project: a system-wide
+reimagining of the Chrome extension "PokéFollower" (pokefollower_cursor_web_plugin),
+originally created by Ali Hamad (ThinkrDoer). It reuses that project's movement and
+animation logic and its per-Pokémon data format.
 
 Copyright (c) 2025 Ali Hamad and contributors
 
-Se concede permiso, de forma gratuita, a cualquier persona que obtenga una copia de
-este software y de los archivos de documentación asociados (el "Software"), para
-utilizar el Software sin restricción, incluyendo sin limitación los derechos de usar,
-copiar, modificar, fusionar, publicar, distribuir, sublicenciar y/o vender copias del
-Software, y de permitir a las personas a las que se les proporcione el Software que
-lo hagan, sujeto a las siguientes condiciones:
+Permission is hereby granted, free of charge, to any person obtaining a copy of this
+software and associated documentation files (the "Software"), to deal in the Software
+without restriction, including without limitation the rights to use, copy, modify,
+merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to the following
+conditions:
 
-El aviso de copyright anterior y este aviso de permiso deberán incluirse en todas las
-copias o partes sustanciales del Software.
+The above copyright notice and this permission notice shall be included in all copies
+or substantial portions of the Software.
 
-EL SOFTWARE SE PROPORCIONA "TAL CUAL", SIN GARANTÍA DE NINGÚN TIPO, EXPRESA O
-IMPLÍCITA, INCLUYENDO PERO NO LIMITADO A GARANTÍAS DE COMERCIALIZACIÓN, IDONEIDAD
-PARA UN PROPÓSITO PARTICULAR Y NO INFRACCIÓN. EN NINGÚN CASO LOS AUTORES O TITULARES
-DEL COPYRIGHT SERÁN RESPONSABLES DE NINGUNA RECLAMACIÓN, DAÑOS U OTRAS
-RESPONSABILIDADES, YA SEA EN UNA ACCIÓN DE CONTRATO, AGRAVIO O CUALQUIER OTRO MOTIVO,
-DERIVADAS DE, FUERA DE O EN CONEXIÓN CON EL SOFTWARE O EL USO U OTRO TIPO DE ACCIONES
-EN EL SOFTWARE.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ------------------------------------------------------------------------------
-2. Sprites de Pokémon — Creative Commons BY-NC-SA 4.0 (NonCommercial + ShareAlike)
+2. Pokémon sprites — Creative Commons BY-NC-SA 4.0 (NonCommercial + ShareAlike)
 ------------------------------------------------------------------------------
 
-Los spritesheets y assets visuales de Pokémon incluidos en esta aplicación provienen
-de PMD Sprite Repository (sprites.pmdcollab.org) y son © de sus contribuidores
-individuales, usados bajo licencia Creative Commons Attribution-NonCommercial-
-ShareAlike 4.0 International (CC-BY-NC-SA 4.0):
+The Pokémon spritesheets and visual assets included in this application come from the
+PMD Sprite Repository (sprites.pmdcollab.org) and are © their individual contributors,
+used under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International
+license (CC-BY-NC-SA 4.0):
 
   https://creativecommons.org/licenses/by-nc-sa/4.0/
 
-Esto significa que esta obra (y cualquier derivado, incluido este instalador):
+This means that this work — and any derivative of it, including this installer:
 
-  - NO puede usarse con fines comerciales.
-  - Cualquier redistribución debe mantener la misma licencia (ShareAlike).
-  - Debe conservar la atribución a los contribuidores originales de PMD Sprite
-    Repository.
+  - may NOT be used for commercial purposes;
+  - if redistributed, must keep the same license (ShareAlike);
+  - must keep attribution to the original PMD Sprite Repository contributors.
 
-Las imágenes de referencia/popup de Pokémon usadas durante el desarrollo del catálogo
-provienen de Pokémon Database (pokemondb.net).
+The Pokémon reference/popup images used while building the catalogue come from Pokémon
+Database (pokemondb.net).
 
-Pokémon y los nombres de personajes son marcas registradas de Nintendo/Game Freak/
-Creatures Inc. Este proyecto es un trabajo de fans, no oficial, sin ánimo de lucro, y
-no está afiliado ni respaldado por dichas compañías.
+Pokémon and character names are trademarks of Nintendo / Game Freak / Creatures Inc.
+This is an unofficial, non-commercial fan project and is not affiliated with, nor
+endorsed by, those companies.
 
 ------------------------------------------------------------------------------
 
-Ver CREDITS.txt para la atribución original completa del proyecto del que este es un
-fork conceptual.
+See CREDITS.txt for the full original attribution of the project this is a conceptual
+fork of.

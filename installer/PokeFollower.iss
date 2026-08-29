@@ -45,12 +45,17 @@ UninstallDisplayIcon={app}\{#MyAppExeName}
 ArchitecturesInstallIn64BitMode=x64compatible
 
 [Languages]
-Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
+; English first = default. Spanish still available in the language picker.
 Name: "english"; MessagesFile: "compiler:Default.isl"
+Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
+
+[CustomMessages]
+english.AutoStartTask=Start PokéFollower automatically when Windows starts
+spanish.AutoStartTask=Iniciar PokéFollower automáticamente con Windows
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
-Name: "startupicon"; Description: "Iniciar PokéFollower automáticamente con Windows"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+Name: "startupicon"; Description: "{cm:AutoStartTask}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
 Source: "..\dist\PokeFollower\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
