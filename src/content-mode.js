@@ -81,6 +81,26 @@
     return gap + footprintRadius(previousSize) + footprintRadius(currentSize);
   }
 
+  function separatePositions({ first, second, minimumDistance }) {
+    const a = { x: finite(first?.x), y: finite(first?.y) };
+    const b = { x: finite(second?.x), y: finite(second?.y) };
+    const distance = Math.max(0, finite(minimumDistance));
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const length = Math.hypot(dx, dy);
+
+    if (distance <= 0 || length >= distance) return { first: a, second: b };
+
+    const nx = length > 0.0001 ? dx / length : 1;
+    const ny = length > 0.0001 ? dy / length : 0;
+    const correction = (distance - length) / 2;
+
+    return {
+      first: { x: a.x - nx * correction, y: a.y - ny * correction },
+      second: { x: b.x + nx * correction, y: b.y + ny * correction }
+    };
+  }
+
   function getWanderBounds({
     viewportWidth,
     viewportHeight,
@@ -177,6 +197,7 @@
     isIndependentWander,
     getTrailingTarget,
     getFollowerSpacing,
+    separatePositions,
     getWanderBounds,
     isWithinBounds,
     pickWanderTarget,

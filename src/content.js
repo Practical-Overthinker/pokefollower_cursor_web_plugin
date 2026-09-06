@@ -288,6 +288,36 @@ function computeTarget(actor, index, now) {
   }
 }
 
+function enforceWanderSeparation() {
+  if (STATE.rosterMode !== "multiple" || ACTORS.length < 2) return;
+
+  for (let pass = 0; pass < ACTORS.length; pass += 1) {
+    for (let firstIndex = 0; firstIndex < ACTORS.length; firstIndex += 1) {
+      const firstActor = ACTORS[firstIndex];
+      if (!firstActor.runtime.isWandering) continue;
+
+      for (let secondIndex = firstIndex + 1; secondIndex < ACTORS.length; secondIndex += 1) {
+        const secondActor = ACTORS[secondIndex];
+        if (!secondActor.runtime.isWandering) continue;
+
+        const minimumDistance = MODE.getFollowerSpacing({
+          configuredDistance: CONFIG.offset,
+          previousSize: spriteSizeFor(firstActor),
+          currentSize: spriteSizeFor(secondActor),
+          scale: visualScale()
+        });
+        const separated = MODE.separatePositions({
+          first: firstActor.runtime.pos,
+          second: secondActor.runtime.pos,
+          minimumDistance
+        });
+        firstActor.runtime.pos = separated.first;
+        secondActor.runtime.pos = separated.second;
+      }
+    }
+  }
+}
+
 // --- 8-way facing from a direction vector (octants) ---
 function pickDir8FromVector(vx, vy) {
   const dead = 0.3;
@@ -525,7 +555,6 @@ function tickActor(actor, index, dtMs, now) {
     runtime.anim.frame = (runtime.anim.frame + 1) % frames;
   }
   runtime.anim.row = pickRowForState(actor, runtime.anim.name);
-  applyFrame(actor);
 }
 
 function teardownInvalidatedContext() {
@@ -545,7 +574,11 @@ function loop() {
     const now = performance.now();
     const dt = now - last;
     last = now;
-    if (ACTORS.length) ACTORS.forEach((actor, index) => tickActor(actor, index, dt, now));
+    if (ACTORS.length) {
+      ACTORS.forEach((actor, index) => tickActor(actor, index, dt, now));
+      enforceWanderSeparation();
+      applyFrames();
+    }
     rafId = requestAnimationFrame(step);
   };
   rafId = requestAnimationFrame(step);

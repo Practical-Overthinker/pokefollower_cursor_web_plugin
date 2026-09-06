@@ -75,6 +75,22 @@ test("configured chain distance becomes a visible gap after sprite footprints", 
   );
 });
 
+test("wandering positions keep the configured minimum center distance", () => {
+  const separated = mode.separatePositions({
+    first: { x: 100, y: 100 },
+    second: { x: 110, y: 100 },
+    minimumDistance: 30
+  });
+
+  assert.equal(
+    Math.hypot(
+      separated.second.x - separated.first.x,
+      separated.second.y - separated.first.y
+    ),
+    30
+  );
+});
+
 test("wander targets stay inside the scaled viewport-safe bounds", () => {
   const bounds = mode.getWanderBounds({
     viewportWidth: 800,
