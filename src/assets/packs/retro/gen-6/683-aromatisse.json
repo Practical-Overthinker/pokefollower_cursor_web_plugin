@@ -1,0 +1,46 @@
+{
+  "name": "683-aromatisse",
+  "generation": "gen-6",
+  "rawPath": "gen-6/683-aromatisse",
+  "flipX": true,
+  "states": {
+    "idle": {
+      "sheet": "Idle-Anim.webp",
+      "frame": {
+        "w": 24,
+        "h": 40
+      },
+      "fps": 1,
+      "frames": 1,
+      "rows": {
+        "front": 0,
+        "frontRight": 1,
+        "right": 2,
+        "backRight": 3,
+        "back": 4,
+        "backLeft": 5,
+        "left": 6,
+        "frontLeft": 7
+      }
+    },
+    "walk": {
+      "sheet": "Walk-Anim.webp",
+      "frame": {
+        "w": 24,
+        "h": 40
+      },
+      "fps": 6,
+      "frames": 1,
+      "rows": {
+        "front": 0,
+        "frontRight": 1,
+        "right": 2,
+        "backRight": 3,
+        "back": 4,
+        "backLeft": 5,
+        "left": 6,
+        "frontLeft": 7
+      }
+    }
+  }
+}

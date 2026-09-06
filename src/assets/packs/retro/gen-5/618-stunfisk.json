@@ -1,0 +1,46 @@
+{
+  "name": "618-stunfisk",
+  "generation": "gen-5",
+  "rawPath": "gen-5/618-stunfisk",
+  "flipX": true,
+  "states": {
+    "idle": {
+      "sheet": "Idle-Anim.webp",
+      "frame": {
+        "w": 24,
+        "h": 16
+      },
+      "fps": 1,
+      "frames": 1,
+      "rows": {
+        "front": 0,
+        "frontRight": 1,
+        "right": 2,
+        "backRight": 3,
+        "back": 4,
+        "backLeft": 5,
+        "left": 6,
+        "frontLeft": 7
+      }
+    },
+    "walk": {
+      "sheet": "Walk-Anim.webp",
+      "frame": {
+        "w": 24,
+        "h": 16
+      },
+      "fps": 6,
+      "frames": 1,
+      "rows": {
+        "front": 0,
+        "frontRight": 1,
+        "right": 2,
+        "backRight": 3,
+        "back": 4,
+        "backLeft": 5,
+        "left": 6,
+        "frontLeft": 7
+      }
+    }
+  }
+}

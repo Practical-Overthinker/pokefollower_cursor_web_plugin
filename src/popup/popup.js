@@ -8,6 +8,39 @@ document.addEventListener("DOMContentLoaded", () => {
   const searchEl  = document.getElementById("packSearch");
   const searchListEl = document.getElementById("packSuggestions");
   const shuffleBtn = document.querySelector(".shuffle");
+  const blockedDialog = document.getElementById("blockedPageDialog");
+  const blockedDetail = document.getElementById("blockedPageDetail");
+  const blockedOk = document.getElementById("blockedPageOk");
+
+  const blockedPageDetails = {
+    "browser-page": "Chrome blocks extensions from running on its internal pages. Open a normal website to use your follower.",
+    "web-store": "Chrome blocks extensions from running in the Web Store. Open a normal website to use your follower.",
+    "extension-page": "Chrome blocks extensions from running inside extension pages. Open a normal website to use your follower."
+  };
+
+  function closeBlockedPageWarning() {
+    if (blockedDialog) blockedDialog.hidden = true;
+  }
+
+  function checkCurrentPage() {
+    if (!blockedDialog || !chrome.tabs?.query) return;
+    chrome.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => {
+      if (chrome.runtime.lastError) return;
+      const currentUrl = tabs?.[0]?.url;
+      const getReason = window.PokeFollowerPageCheck?.getUnsupportedPageReason;
+      const reason = getReason ? getReason(currentUrl) : null;
+      if (!reason) return;
+
+      if (blockedDetail) {
+        blockedDetail.textContent = blockedPageDetails[reason] || blockedPageDetails["browser-page"];
+      }
+      blockedDialog.hidden = false;
+      blockedOk?.focus();
+    });
+  }
+
+  blockedOk?.addEventListener("click", closeBlockedPageWarning);
+  checkCurrentPage();
 
   // Normalize pack <option>s: sort by Pokédex number and label as "###-Name"
   function titleCaseSlug(name) {
@@ -644,6 +677,11 @@ document.addEventListener("DOMContentLoaded", () => {
   // ESC to close (QoL)
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
+      if (blockedDialog && !blockedDialog.hidden) {
+        e.preventDefault();
+        closeBlockedPageWarning();
+        return;
+      }
       if (isSearchOpen()) {
         e.preventDefault();
         closePackSearch();

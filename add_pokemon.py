@@ -26,12 +26,12 @@ from pathlib import Path
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
-VSCODE_ROOT  = Path("/Users/alihamad/Documents/GitHub/pokefollower_cursor_web_plugin")
+VSCODE_ROOT  = Path(__file__).resolve().parent
 VSCODE_RAW   = VSCODE_ROOT / "src/assets/raw"
 VSCODE_UI    = VSCODE_ROOT / "src/assets/ui"
 VSCODE_PACKS = VSCODE_ROOT / "src/assets/packs/retro"
 
-PROJECTS     = Path("/Users/alihamad/Desktop/PROJECTS/Pokefollower Plugin/Pokemon")
+PROJECTS     = VSCODE_ROOT.parent / "Pokemon"
 INCOMING     = PROJECTS / "incoming"
 PROCESSED    = PROJECTS / "processed"
 TEMP         = INCOMING / "_tmp"
@@ -152,9 +152,13 @@ def extract_sprites(zip_path, dex_num, name):
     if not (extract_to / "AnimData.xml").exists():
         err(f"'AnimData.xml' not found in zip for {dex}-{name}")
 
-    # Walk-Anim is always required
+    # These archives have no walk animation; reuse idle for the required slot.
     if not (extract_to / "Walk-Anim.png").exists():
-        err(f"'Walk-Anim.png' not found in zip for {dex}-{name}")
+        if (dex, name) in {("618", "stunfisk"), ("683", "aromatisse")} and (extract_to / "Idle-Anim.png").exists():
+            shutil.copy2(extract_to / "Idle-Anim.png", extract_to / "Walk-Anim.png")
+            warn(f"Walk-Anim.png missing for {dex}-{name} — using Idle-Anim.png")
+        else:
+            err(f"'Walk-Anim.png' not found in zip for {dex}-{name}")
 
     # Idle-Anim fallback: if missing, copy Walk-Anim as Idle-Anim
     if not (extract_to / "Idle-Anim.png").exists():

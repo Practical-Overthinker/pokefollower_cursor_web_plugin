@@ -252,10 +252,79 @@
       position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px;
       overflow: hidden; clip: rect(0, 0, 1px, 1px); white-space: nowrap; border: 0;
     }
+
+    /* Blocked-page warning: the popup can open even when the content script cannot run. */
+    .blocked-dialog[hidden] { display: none !important; }
+    .blocked-dialog {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      box-sizing: border-box;
+      background: rgba(23, 23, 23, 0.96);
+    }
+    .blocked-card {
+      width: min(100%, 320px);
+      box-sizing: border-box;
+      padding: 28px 28px 24px;
+      border: 1.5px solid rgba(255, 255, 255, 0.75);
+      border-radius: 34px;
+      background: #d6d7d9;
+      color: #171717;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+    }
+    .blocked-icon {
+      display: block;
+      width: 72px;
+      height: 72px;
+      margin: 0 0 22px;
+      padding: 10px;
+      box-sizing: border-box;
+      border-radius: 22px;
+      background: #fff;
+      box-shadow: 0 3px 7px rgba(0, 0, 0, 0.2);
+      image-rendering: pixelated;
+    }
+    .blocked-title {
+      margin: 0 0 18px;
+      font-size: 24px;
+      line-height: 1.12;
+      letter-spacing: -0.02em;
+    }
+    .blocked-message {
+      margin: 0;
+      font-size: 20px;
+      line-height: 1.22;
+    }
+    .blocked-detail {
+      margin: 14px 0 0;
+      font-size: 13px;
+      line-height: 1.35;
+    }
+    .blocked-ok {
+      width: 100%;
+      margin-top: 26px;
+      padding: 10px 18px;
+      border: 0;
+      border-radius: 999px;
+      background: #ef4036;
+      color: #fff;
+      font: inherit;
+      font-size: 18px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .blocked-ok:hover { background: #d9342c; }
+    .blocked-ok:focus-visible {
+      outline: 3px solid #171717;
+      outline-offset: 3px;
+    }
   </style>
 </head>
 <body>
-  <div class="announce">Thanks for 30k & feedback! Check footer link for updates :D</div>
+  <div class="announce">Thanks for 50k & feedback! Check footer link for updates :D</div>
   <!-- Pokéball notch -->
   <div class="notch" aria-hidden="true"></div>
 
@@ -352,7 +421,7 @@
       <br />
       <span class="hint-links">
         <a
-          href="https://github.com/ThinkrDoer/pokefollower_cursor_web_plugin"
+          href="https://github.com/practical-overthinker/pokefollower_cursor_web_plugin"
           target="_blank"
           rel="noreferrer noopener"
         >About / Updates</a>
@@ -362,7 +431,7 @@
           rel="noreferrer noopener"
         >Privacy Policy</a>
         <a
-          href="https://github.com/ThinkrDoer/pokefollower_cursor_web_plugin/commits/main/"
+          href="https://github.com/practical-overthinker/pokefollower_cursor_web_plugin/commits/main/"
           target="_blank"
           rel="noreferrer noopener"
         >Development Log</a>
@@ -370,6 +439,25 @@
     </p>
   </div>
 
+  <div
+    id="blockedPageDialog"
+    class="blocked-dialog"
+    hidden
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="blockedPageTitle"
+    aria-describedby="blockedPageMessage blockedPageDetail"
+  >
+    <div class="blocked-card">
+      <img class="blocked-icon" src="../assets/icons/pokeball-128.png" alt="" aria-hidden="true" />
+      <h1 id="blockedPageTitle" class="blocked-title">PokéFollower says</h1>
+      <p id="blockedPageMessage" class="blocked-message">Sorry, PokéFollower cannot be activated on this page :(</p>
+      <p id="blockedPageDetail" class="blocked-detail">Chrome blocks extensions from running on browser pages and the Chrome Web Store.</p>
+      <button id="blockedPageOk" class="blocked-ok" type="button">OK</button>
+    </div>
+  </div>
+
+  <script type="module" src="page-check.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

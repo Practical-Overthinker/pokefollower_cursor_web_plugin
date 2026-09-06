@@ -3,7 +3,7 @@
   "name": "Pokemon PokéFollower Cursor",
   "version": "4.0.0",
   "description": "Pick a cute retro 2D Pokémon sprite that follows your cursor on web pages.",
-  "permissions": ["storage"],
+  "permissions": ["storage", "activeTab"],
   "action": {
     "default_title": "PokéFollower",
     "default_popup": "popup/index.html",
