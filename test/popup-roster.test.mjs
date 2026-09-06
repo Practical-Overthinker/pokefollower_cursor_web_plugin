@@ -72,6 +72,10 @@ test("popup markup provides the slot strip and remove affordance contract", () =
   assert.match(html, /id="rosterModeButton"/);
   assert.ok(html.indexOf("rosterSlots") < html.indexOf("rosterModeButton"));
   assert.match(html, /\.roster-mode\s*\{[^}]*width:/s);
+  assert.match(html, /class="roster-mode-icon"/);
+  assert.match(html, /class="roster-mode-label"/);
+  assert.match(html, /class="roster-mode-option"/);
+  assert.match(html, /\.roster-mode\s*\{[^}]*margin-top:\s*2px/s);
   assert.match(html, /<script type="module" src="popup\.js"><\/script>/);
   assert.match(html, /\.slot-remove\s*\{[^}]*position:\s*absolute/s);
   assert.match(html, /\.slot-remove\s*\{[^}]*background:\s*#ef4036/s);
@@ -89,6 +93,8 @@ test("popup controller is wired for roster storage and slot actions", () => {
   assert.match(popup, /vcp1_roster_mode/);
   assert.match(popup, /toggleRosterMode/);
   assert.match(popup, /rosterModeButton/);
+  assert.match(popup, /roster-mode-label/);
+  assert.match(popup, /dataset\.mode/);
 });
 
 test("selecting an occupied slot persists the active pack for the page", () => {

@@ -106,16 +106,50 @@
       height: 24px;
     }
     .roster-mode {
-      width: 72px;
+      width: 84px;
       min-height: 20px;
-      padding: 1px 5px;
+      margin-top: 2px;
+      padding: 1px 3px;
       border: 1px solid #000;
       border-radius: 4px;
       background: #fff;
       color: #000;
       font: 700 10px/1.2 system-ui, sans-serif;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
       text-align: left;
       cursor: pointer;
+      transition: background-color 120ms ease-out, transform 120ms ease-out;
+    }
+    .roster-mode:active {
+      transform: scale(0.96);
+    }
+    .roster-mode-icon {
+      display: inline-flex;
+      flex: 0 0 auto;
+      overflow: hidden;
+      border: 1px solid #000;
+      border-radius: 3px;
+    }
+    .roster-mode-option {
+      width: 11px;
+      height: 14px;
+      display: grid;
+      place-items: center;
+      background: #fff;
+      color: #000;
+      font: 800 8px/1 system-ui, sans-serif;
+    }
+    .roster-mode[data-mode="individual"] .roster-mode-option[data-mode="individual"],
+    .roster-mode[data-mode="multiple"] .roster-mode-option[data-mode="multiple"] {
+      background: #ef4036;
+    }
+    .roster-mode-label {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
     .roster-mode:focus-visible {
       outline: 2px solid #000;
@@ -430,7 +464,13 @@
     <div class="brand-block">
       <div class="brand">PokeFollower v4.0</div>
       <div id="rosterSlots" class="roster-slots" role="group" aria-label="Pokémon slots"></div>
-      <button id="rosterModeButton" class="roster-mode" type="button" aria-pressed="false" aria-label="Roster mode: Individual">Individual</button>
+      <button id="rosterModeButton" class="roster-mode" type="button" data-mode="individual" aria-pressed="false" aria-label="Roster mode: Individual">
+        <span class="roster-mode-icon" aria-hidden="true">
+          <span class="roster-mode-option" data-mode="individual">1</span>
+          <span class="roster-mode-option" data-mode="multiple">6</span>
+        </span>
+        <span class="roster-mode-label">Individual</span>
+      </button>
     </div>
     <div class="mode-toggles" role="group" aria-label="Follower modes">
       <label class="mode-toggle" for="enabled">

@@ -160,8 +160,12 @@ function resetWanderState(actor) {
   runtime.moveVel.y = 0;
 }
 
+function spriteSizeFor(actor) {
+  return actor.meta?.states?.walk?.frame || actor.meta?.states?.idle?.frame || { w: 40, h: 40 };
+}
+
 function currentWanderBounds(actor) {
-  const frame = actor.meta?.states?.idle?.frame || actor.meta?.states?.walk?.frame || { w: 40, h: 40 };
+  const frame = spriteSizeFor(actor);
   return MODE.getWanderBounds({
     viewportWidth: window.innerWidth,
     viewportHeight: window.innerHeight,
@@ -263,11 +267,18 @@ function computeTarget(actor, index, now) {
 
   resetWanderState(actor);
   if (STATE.rosterMode === "multiple" && index > 0 && ACTORS[index - 1]) {
-    const previous = ACTORS[index - 1].runtime;
+    const previousActor = ACTORS[index - 1];
+    const previous = previousActor.runtime;
+    const spacing = MODE.getFollowerSpacing({
+      configuredDistance: CONFIG.offset,
+      previousSize: spriteSizeFor(previousActor),
+      currentSize: spriteSizeFor(actor),
+      scale: visualScale()
+    });
     const target = MODE.getTrailingTarget({
       previousPosition: previous.pos,
       previousTarget: previous.target,
-      spacing: CONFIG.offset,
+      spacing,
       fallbackDirection: POINTER.velAvg
     });
     runtime.target.x = target.x;

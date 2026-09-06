@@ -63,6 +63,18 @@ test("trailing targets use movement direction and spacing", () => {
   assert.equal(stationary.y, 70);
 });
 
+test("configured chain distance becomes a visible gap after sprite footprints", () => {
+  assert.equal(
+    mode.getFollowerSpacing({
+      configuredDistance: 30,
+      previousSize: { w: 32, h: 40 },
+      currentSize: { w: 32, h: 40 },
+      scale: 3
+    }),
+    150
+  );
+});
+
 test("wander targets stay inside the scaled viewport-safe bounds", () => {
   const bounds = mode.getWanderBounds({
     viewportWidth: 800,
@@ -177,9 +189,10 @@ test("content runtime reads the roster and keeps Individual mode single-actor", 
 test("Multiple Follow derives ordered trailing targets from prior actors", () => {
   const source = fs.readFileSync(new URL("../src/content.js", import.meta.url), "utf8");
   assert.match(source, /STATE\.rosterMode === "multiple" && index > 0/);
-  assert.match(source, /const previous = ACTORS\[index - 1\]\.runtime/);
+  assert.match(source, /const previousActor = ACTORS\[index - 1\];\s*const previous = previousActor\.runtime/s);
   assert.match(source, /MODE\.getTrailingTarget/);
-  assert.match(source, /spacing:\s*CONFIG\.offset/);
+  assert.match(source, /MODE\.getFollowerSpacing/);
+  assert.match(source, /configuredDistance:\s*CONFIG\.offset/);
   assert.match(source, /ACTORS\.length\s*=\s*0/);
 
   const first = mode.getTrailingTarget({

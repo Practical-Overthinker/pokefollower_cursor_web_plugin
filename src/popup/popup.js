@@ -18,6 +18,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const packEl    = document.getElementById("pack");
   const rosterSlotsEl = document.getElementById("rosterSlots");
   const rosterModeButton = document.getElementById("rosterModeButton");
+  const rosterModeLabel = rosterModeButton?.querySelector(".roster-mode-label");
   const pickerEl  = document.querySelector(".picker");
   const searchBtn = pickerEl ? pickerEl.querySelector(".glass") : null;
   const searchEl  = document.getElementById("packSearch");
@@ -98,7 +99,9 @@ document.addEventListener("DOMContentLoaded", () => {
   function renderRosterMode() {
     if (!rosterModeButton) return;
     const label = rosterMode === "multiple" ? "Multiple" : "Individual";
-    rosterModeButton.textContent = label;
+    rosterModeButton.dataset.mode = rosterMode;
+    if (rosterModeLabel) rosterModeLabel.textContent = label;
+    else rosterModeButton.textContent = label;
     rosterModeButton.setAttribute("aria-label", `Roster mode: ${label}`);
     rosterModeButton.setAttribute("aria-pressed", String(rosterMode === "multiple"));
   }

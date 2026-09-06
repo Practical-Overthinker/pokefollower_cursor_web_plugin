@@ -68,6 +68,19 @@
     };
   }
 
+  function getFollowerSpacing({
+    configuredDistance,
+    previousSize,
+    currentSize,
+    scale = 1
+  }) {
+    const gap = Math.max(0, finite(configuredDistance));
+    const safeScale = Math.max(0, finite(scale, 1));
+    const footprintRadius = (size) =>
+      Math.max(finite(size?.w), finite(size?.h)) * safeScale / 2;
+    return gap + footprintRadius(previousSize) + footprintRadius(currentSize);
+  }
+
   function getWanderBounds({
     viewportWidth,
     viewportHeight,
@@ -163,6 +176,7 @@
     shouldFollow,
     isIndependentWander,
     getTrailingTarget,
+    getFollowerSpacing,
     getWanderBounds,
     isWithinBounds,
     pickWanderTarget,
