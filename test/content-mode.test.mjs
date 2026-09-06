@@ -63,6 +63,20 @@ test("trailing targets use movement direction and spacing", () => {
   assert.equal(stationary.y, 70);
 });
 
+test("chain follower facing points toward the previous pokemon", () => {
+  const source = fs.readFileSync(new URL("../src/content.js", import.meta.url), "utf8");
+  assert.match(source, /function pickRowForState\(actor, stateName, index\)/);
+  assert.match(source, /MODE\.getChainFacingVector/);
+  assert.match(source, /pickRowForState\(actor, runtime\.anim\.name, index\)/);
+
+  const direction = mode.getChainFacingVector({
+    actorPosition: { x: 100, y: 100 },
+    previousPosition: { x: 160, y: 70 }
+  });
+  assert.equal(direction.x, 60);
+  assert.equal(direction.y, -30);
+});
+
 test("configured chain distance becomes a visible gap after sprite footprints", () => {
   assert.equal(
     mode.getFollowerSpacing({

@@ -101,6 +101,18 @@
     };
   }
 
+  function getChainFacingVector({ actorPosition, previousPosition, fallbackDirection = { x: 0, y: 0 } }) {
+    const direction = {
+      x: finite(previousPosition?.x) - finite(actorPosition?.x),
+      y: finite(previousPosition?.y) - finite(actorPosition?.y)
+    };
+    if (Math.hypot(direction.x, direction.y) > 0.0001) return direction;
+    return {
+      x: finite(fallbackDirection?.x),
+      y: finite(fallbackDirection?.y)
+    };
+  }
+
   function getWanderBounds({
     viewportWidth,
     viewportHeight,
@@ -198,6 +210,7 @@
     getTrailingTarget,
     getFollowerSpacing,
     separatePositions,
+    getChainFacingVector,
     getWanderBounds,
     isWithinBounds,
     pickWanderTarget,

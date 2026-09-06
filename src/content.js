@@ -328,11 +328,26 @@ function pickDir8FromVector(vx, vy) {
   return ["right", "frontRight", "front", "frontLeft", "left", "backLeft", "back", "backRight"][idx];
 }
 
-function pickRowForState(actor, stateName) {
+function pickRowForState(actor, stateName, index) {
   const st = actor.meta?.states?.[stateName];
   if (!st) return 0;
   const rows = st.rows || { front: 0 };
-  const direction = actor.runtime.isWandering ? actor.runtime.moveVel : POINTER.velAvg;
+  let direction;
+  if (actor.runtime.isWandering) {
+    direction = actor.runtime.moveVel;
+  } else if (STATE.rosterMode === "multiple" && index > 0 && ACTORS[index - 1]) {
+    const previous = ACTORS[index - 1].runtime;
+    direction = MODE.getChainFacingVector({
+      actorPosition: actor.runtime.pos,
+      previousPosition: previous.pos,
+      fallbackDirection: {
+        x: previous.target.x - actor.runtime.target.x,
+        y: previous.target.y - actor.runtime.target.y
+      }
+    });
+  } else {
+    direction = POINTER.velAvg;
+  }
   const dir8 = pickDir8FromVector(direction.x, direction.y);
   if (dir8 in rows) return rows[dir8];
   const fallbackMap = {
@@ -518,7 +533,7 @@ function tickActor(actor, index, dtMs, now) {
     const timedOut = now - runtime.pendingState.queuedAt > 300;
     if (atCycleEnd || timedOut) {
       runtime.anim.name = runtime.pendingState.name;
-      runtime.anim.row = pickRowForState(actor, runtime.anim.name);
+      runtime.anim.row = pickRowForState(actor, runtime.anim.name, index);
       runtime.pendingState = null;
     }
   } else {
@@ -554,7 +569,7 @@ function tickActor(actor, index, dtMs, now) {
     runtime.anim.accMs -= msPerFrame;
     runtime.anim.frame = (runtime.anim.frame + 1) % frames;
   }
-  runtime.anim.row = pickRowForState(actor, runtime.anim.name);
+  runtime.anim.row = pickRowForState(actor, runtime.anim.name, index);
 }
 
 function teardownInvalidatedContext() {
