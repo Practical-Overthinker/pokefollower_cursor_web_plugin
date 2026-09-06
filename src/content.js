@@ -1,5 +1,5 @@
 // === VCP1 content script: load pack JSON + animate one or more followers ===
-const DEFAULT_PACK = "retro/gen-1/009-blastoise";
+const DEFAULT_PACK = "retro/gen-1/001-bulbasaur";
 const GENERATION_DIRS = ["gen-1", "gen-2", "gen-3", "gen-4", "gen-5", "gen-6", "gen-7", "gen-8", "gen-9"];
 const MODE = globalThis.__vcp1Mode;
 const SCALE_BASE = 3;

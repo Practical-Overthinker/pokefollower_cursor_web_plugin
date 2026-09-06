@@ -7,7 +7,7 @@
   <style>
     /* Card sizing + paddings (wider so SPEED fits comfortably) */
     :root {
-      --announce-h: 30px;
+      --announce-h: 34px;
       --announce-side-pad: 14px;
     }
     body {
@@ -57,10 +57,25 @@
       letter-spacing: 0.01em;
       text-align: center;
       z-index: 3;
-      padding: 3px var(--announce-side-pad);
+      flex-direction: column;
+      gap: 1px;
+      padding: 2px var(--announce-side-pad);
       box-sizing: border-box;
       white-space: normal;
       line-height: 1.2;
+    }
+    .announce span,
+    .announce a {
+      white-space: nowrap;
+      color: inherit;
+      text-decoration: underline;
+    }
+    .announce span {
+      text-decoration: none;
+    }
+    .announce a:hover,
+    .announce a:focus-visible {
+      color: #ef4036;
     }
 
     /* Half Pokéball notch (outer + inner ring) */
@@ -465,8 +480,8 @@
   </style>
 </head>
 <body>
-  <div class="announce">Thanks for 50k & feedback! Check footer link for updates :D</div>
-  <div class="brand">PokeFollower v4.0</div>
+  <div class="announce"><span>Thanks for 50k &amp; feedback! Need help with Gen 5.</span><a href="https://app.notion.com/p/3d341183ac9c813b9e81d0eab768f1bc?pvs=204" target="_blank" rel="noreferrer">More details here.</a></div>
+  <div class="brand">PokeFollower v4.5</div>
   <!-- Pokéball notch -->
   <div class="notch" aria-hidden="true"></div>
 
@@ -498,7 +513,7 @@
     <!-- Preview with chevrons -->
     <div class="preview">
       <div class="chev left"  title="Previous"></div>
-      <img id="previewSprite" src="../assets/ui/gen-1/009-blastoise.png" alt="Preview sprite" />
+      <img id="previewSprite" src="../assets/ui/gen-1/001-bulbasaur.png" alt="Preview sprite" />
       <div class="chev right" title="Next"></div>
     </div>
 
@@ -508,6 +523,7 @@
         <img src="../assets/ui/buttons/magnifying-glass.png" alt="" aria-hidden="true" />
       </button>
       <select id="pack" aria-label="Pokémon">
+        <option value="retro/gen-1/001-bulbasaur">Bulbasaur (#001)</option>
         <option value="retro/gen-1/009-blastoise">Blastoise (#009)</option>
         <option value="retro/gen-1/006-charizard">Charizard (#006)</option>
       </select>

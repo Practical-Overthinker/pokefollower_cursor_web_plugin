@@ -67,6 +67,13 @@ test("roster mode normalizes to Individual and toggles between the two modes", (
 
 test("popup markup provides the slot strip and remove affordance contract", () => {
   const html = fs.readFileSync(new URL("../src/popup/index.html", import.meta.url), "utf8");
+  assert.match(html, /PokeFollower v4\.5/);
+  assert.match(html, /Need help with Gen 5\./);
+  assert.doesNotMatch(html, /Need help with Gen 5\?/);
+  assert.match(html, /\.announce\s*\{[^}]*flex-direction:\s*column/s);
+  assert.match(html, /<span>Thanks for 50k &amp; feedback! Need help with Gen 5\.<\/span><a/);
+  assert.match(html, /href="https:\/\/app\.notion\.com\/p\/3d341183ac9c813b9e81d0eab768f1bc\?pvs=204"/);
+  assert.match(html, /target="_blank"/);
   assert.match(html, /class="brand-block"/);
   assert.match(html, /class="brand"/);
   assert.match(html, /id="rosterSlots"/);
@@ -111,4 +118,20 @@ test("selecting an occupied slot persists the active pack for the page", () => {
   const end = popup.indexOf("\n  function openRosterSlot", start);
   assert.ok(start >= 0 && end > start);
   assert.match(popup.slice(start, end), /persistRoster\(\)/);
+});
+
+test("new installs start on Bulbasaur and carry the v4.5 extension version", () => {
+  const html = fs.readFileSync(new URL("../src/popup/index.html", import.meta.url), "utf8");
+  const popup = fs.readFileSync(new URL("../src/popup/popup.js", import.meta.url), "utf8");
+  const content = fs.readFileSync(new URL("../src/content.js", import.meta.url), "utf8");
+  const manifest = JSON.parse(fs.readFileSync(new URL("../src/manifest.json", import.meta.url), "utf8"));
+  const packageJson = JSON.parse(fs.readFileSync(new URL("../package.json", import.meta.url), "utf8"));
+  const bulbasaur = "retro/gen-1/001-bulbasaur";
+
+  assert.match(html, /src="\.\.\/assets\/ui\/gen-1\/001-bulbasaur\.png"/);
+  assert.match(html, new RegExp(`<option value="${bulbasaur}">Bulbasaur`));
+  assert.match(popup, new RegExp(`const DEFAULT_PACK = "${bulbasaur}"`));
+  assert.match(content, new RegExp(`const DEFAULT_PACK = "${bulbasaur}"`));
+  assert.equal(manifest.version, "4.5.0");
+  assert.equal(packageJson.version, manifest.version);
 });
