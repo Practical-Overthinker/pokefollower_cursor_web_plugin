@@ -89,3 +89,11 @@ test("random sleep duration stays between fifteen and sixty seconds", () => {
   assert.equal(mode.randomBetween(15000, 60000, () => 0), 15000);
   assert.equal(mode.randomBetween(15000, 60000, () => 1), 60000);
 });
+
+test("wander timing contract is present", () => {
+  const source = fs.readFileSync(new URL("../src/content.js", import.meta.url), "utf8");
+  assert.match(source, /WANDER_IDLE_MIN_MS\s*=\s*1500/);
+  assert.match(source, /WANDER_IDLE_MAX_MS\s*=\s*4500/);
+  assert.match(source, /WANDER_SLEEP_MIN_MS\s*=\s*15000/);
+  assert.match(source, /WANDER_SLEEP_MAX_MS\s*=\s*60000/);
+});

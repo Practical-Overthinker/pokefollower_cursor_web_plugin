@@ -21,9 +21,12 @@ const RUNTIME = {
   lastMoveTs: 0,
   lastMouse: { x: 0, y: 0, t: 0 },
   wanderTarget: null,
-  wanderPauseUntil: 0,
   isWandering: false,
   moveVel: { x: 0, y: 0 },
+  wanderPhase: "roam",
+  wanderIdleUntil: 0,
+  wanderSleepUntil: 0,
+  wanderDestinations: 0,
 
   // position/target and smoothed velocity
   pos:       { x: 0, y: 0 },
@@ -39,8 +42,13 @@ const RUNTIME = {
 const SLEEP_TIMEOUT_MS = 30000; // 30s of no movement -> sleep
 const ARRIVE_RADIUS_PX = 6;     // close enough to target to call it "arrived" and settle into idle
 const SLOW_RADIUS_PX   = 60;    // ease walking speed down within this distance for a soft landing
-const WANDER_PAUSE_MIN_MS = 500;
-const WANDER_PAUSE_MAX_MS = 1000;
+const WANDER_IDLE_MIN_MS = 1500;
+const WANDER_IDLE_MAX_MS = 4500;
+const WANDER_SLEEP_MIN_MS = 15000;
+const WANDER_SLEEP_MAX_MS = 60000;
+const WANDER_MAX_STEP_PX = 220;
+const WANDER_SLEEP_MIN_DESTINATIONS = 3;
+const WANDER_SLEEP_CHANCE = 0.35;
 const WANDER_EDGE_MARGIN_PX = 12;
 
 function hasState(name) {
@@ -125,7 +133,12 @@ function computeFollowTarget() {
 
 function resetWanderState() {
   RUNTIME.wanderTarget = null;
-  RUNTIME.wanderPauseUntil = 0;
+  RUNTIME.wanderPhase = "roam";
+  RUNTIME.wanderIdleUntil = 0;
+  RUNTIME.wanderSleepUntil = 0;
+  RUNTIME.wanderDestinations = 0;
+  RUNTIME.moveVel.x = 0;
+  RUNTIME.moveVel.y = 0;
 }
 
 function currentWanderBounds() {
@@ -141,31 +154,70 @@ function currentWanderBounds() {
 }
 
 function chooseWanderTarget(bounds = currentWanderBounds()) {
-  RUNTIME.wanderTarget = MODE.pickWanderTarget(bounds, RUNTIME.wanderTarget);
+  RUNTIME.wanderTarget = MODE.pickNearbyWanderTarget(
+    bounds,
+    RUNTIME.pos,
+    RUNTIME.wanderTarget,
+    WANDER_MAX_STEP_PX
+  );
   return RUNTIME.wanderTarget;
 }
 
-function randomWanderPause() {
-  return WANDER_PAUSE_MIN_MS + Math.random() * (WANDER_PAUSE_MAX_MS - WANDER_PAUSE_MIN_MS);
+function reachedWanderTarget() {
+  return Math.hypot(
+    RUNTIME.wanderTarget.x - RUNTIME.pos.x,
+    RUNTIME.wanderTarget.y - RUNTIME.pos.y
+  ) <= ARRIVE_RADIUS_PX;
 }
 
 function computeWanderTarget(now) {
   const bounds = currentWanderBounds();
   if (RUNTIME.wanderTarget && !MODE.isWithinBounds(RUNTIME.wanderTarget, bounds)) {
     RUNTIME.wanderTarget = null;
-    RUNTIME.wanderPauseUntil = 0;
+    RUNTIME.wanderPhase = "roam";
+    RUNTIME.wanderIdleUntil = 0;
+  }
+
+  if (RUNTIME.wanderPhase === "sleep") {
+    RUNTIME.target.x = RUNTIME.pos.x;
+    RUNTIME.target.y = RUNTIME.pos.y;
+    if (now < RUNTIME.wanderSleepUntil) return;
+    RUNTIME.wanderPhase = "roam";
+    RUNTIME.wanderSleepUntil = 0;
+    RUNTIME.wanderDestinations = 0;
+    RUNTIME.wanderTarget = null;
   }
 
   if (!RUNTIME.wanderTarget) chooseWanderTarget(bounds);
 
-  const dx = RUNTIME.wanderTarget.x - RUNTIME.pos.x;
-  const dy = RUNTIME.wanderTarget.y - RUNTIME.pos.y;
-  if (Math.hypot(dx, dy) <= ARRIVE_RADIUS_PX) {
-    if (!RUNTIME.wanderPauseUntil) RUNTIME.wanderPauseUntil = now + randomWanderPause();
-    if (now >= RUNTIME.wanderPauseUntil) {
-      RUNTIME.wanderPauseUntil = 0;
-      chooseWanderTarget(bounds);
+  if (RUNTIME.wanderPhase === "roam" && reachedWanderTarget()) {
+    RUNTIME.wanderPhase = "idle";
+    RUNTIME.wanderIdleUntil = now + MODE.randomBetween(WANDER_IDLE_MIN_MS, WANDER_IDLE_MAX_MS);
+  }
+
+  if (RUNTIME.wanderPhase === "idle") {
+    RUNTIME.target.x = RUNTIME.pos.x;
+    RUNTIME.target.y = RUNTIME.pos.y;
+    if (now < RUNTIME.wanderIdleUntil) return;
+
+    RUNTIME.wanderIdleUntil = 0;
+    RUNTIME.wanderDestinations += 1;
+    if (MODE.shouldSleepAfterWander({
+      hasSleep: hasState("sleep"),
+      destinations: RUNTIME.wanderDestinations,
+      randomValue: Math.random(),
+      minDestinations: WANDER_SLEEP_MIN_DESTINATIONS,
+      chance: WANDER_SLEEP_CHANCE
+    })) {
+      RUNTIME.wanderPhase = "sleep";
+      RUNTIME.wanderSleepUntil = now + MODE.randomBetween(WANDER_SLEEP_MIN_MS, WANDER_SLEEP_MAX_MS);
+      RUNTIME.target.x = RUNTIME.pos.x;
+      RUNTIME.target.y = RUNTIME.pos.y;
+      return;
     }
+
+    RUNTIME.wanderPhase = "roam";
+    chooseWanderTarget(bounds);
   }
 
   RUNTIME.target.x = RUNTIME.wanderTarget.x;
@@ -395,6 +447,8 @@ function applyFrame() {
 
 function pickStateBySpeed() {
   const now = performance.now();
+  if (RUNTIME.isWandering && RUNTIME.wanderPhase === "sleep") return "sleep";
+  if (RUNTIME.isWandering && RUNTIME.wanderPhase === "idle") return "idle";
   // If the pack has a 'sleep' state and we've been inactive long enough, sleep.
   if (hasState("sleep") && !RUNTIME.isWandering && (now - RUNTIME.lastMoveTs) > SLEEP_TIMEOUT_MS) {
     return "sleep";
@@ -435,7 +489,8 @@ function tick(dtMs) {
   const dist = Math.hypot(dx, dy);
 
   if (dist > ARRIVE_RADIUS_PX) {
-    const walkSpeed = walkSpeedFromConfig(); // px/s
+    const baseSpeed = walkSpeedFromConfig();
+    const walkSpeed = RUNTIME.isWandering ? MODE.wanderSpeed(baseSpeed) : baseSpeed;
     const speed = dist < SLOW_RADIUS_PX ? walkSpeed * (dist / SLOW_RADIUS_PX) : walkSpeed;
     // Clamp the per-frame delta so a long frame gap (e.g. tab was backgrounded)
     // can't teleport the follower — it just keeps walking once frames resume.
@@ -517,8 +572,7 @@ function onMouseMove(e) {
   RUNTIME.lastMouse.t = now;
   RUNTIME.lastMoveTs = now;
   if (STATE.enabled && STATE.wander) {
-    RUNTIME.wanderTarget = null;
-    RUNTIME.wanderPauseUntil = 0;
+    resetWanderState();
     RUNTIME.isWandering = false;
   }
 }
