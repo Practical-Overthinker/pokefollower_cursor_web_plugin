@@ -195,3 +195,16 @@ test("Multiple Follow derives ordered trailing targets from prior actors", () =>
   assert.equal(first.x, 70);
   assert.equal(second.x, 40);
 });
+
+test("Multiple Wander keeps per-actor phases and resets them for hybrid rejoin", () => {
+  const source = fs.readFileSync(new URL("../src/content.js", import.meta.url), "utf8");
+  assert.match(source, /function computeWanderTarget\(actor, now\)/);
+  assert.match(source, /runtime\.wanderTarget/);
+  assert.match(source, /runtime\.wanderPhase/);
+  assert.match(source, /runtime\.isWandering = STATE\.wander && !following/);
+  assert.match(source, /if \(!following\) \{\s*computeWanderTarget\(actor, now\)/s);
+  assert.match(source, /ACTORS\.forEach\(\(actor\) => \{\s*resetWanderState\(actor\)/s);
+  assert.match(source, /function removeActorElements/);
+  assert.match(source, /if \(MODE\.isActive\(STATE\.enabled, STATE\.wander\)\) start\(\);/);
+  assert.match(source, /let rebuildToken = 0/);
+});
