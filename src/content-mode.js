@@ -49,6 +49,21 @@
       point.y >= bounds.minY && point.y <= bounds.maxY;
   }
 
+  function randomBetween(min, max, random = Math.random) {
+    const low = finite(min);
+    const high = Math.max(low, finite(max, low));
+    const roll = Math.min(1, Math.max(0, finite(random())));
+    return low + (high - low) * roll;
+  }
+
+  function wanderSpeed(baseSpeed) {
+    return Math.max(0, finite(baseSpeed)) * 0.5;
+  }
+
+  function shouldSleepAfterWander({ hasSleep, destinations, randomValue }) {
+    return !!hasSleep && destinations >= 3 && finite(randomValue) < 0.35;
+  }
+
   function pickWanderTarget(bounds, currentTarget, random = Math.random) {
     const nextRandom = typeof random === "function" ? random : Math.random;
     const xSpan = Math.max(0, bounds.maxX - bounds.minX);
@@ -67,12 +82,37 @@
     return target;
   }
 
+  function pickNearbyWanderTarget(bounds, origin, previousTarget, maxDistance = 220, random = Math.random) {
+    const nextRandom = typeof random === "function" ? random : Math.random;
+    const originX = Math.min(bounds.maxX, Math.max(bounds.minX, finite(origin?.x, (bounds.minX + bounds.maxX) / 2)));
+    const originY = Math.min(bounds.maxY, Math.max(bounds.minY, finite(origin?.y, (bounds.minY + bounds.maxY) / 2)));
+    const angle = randomBetween(0, Math.PI * 2, nextRandom);
+    const distance = randomBetween(0, maxDistance, nextRandom);
+    const candidate = {
+      x: originX + Math.cos(angle) * distance,
+      y: originY + Math.sin(angle) * distance
+    };
+    const target = {
+      x: Math.min(bounds.maxX, Math.max(bounds.minX, candidate.x)),
+      y: Math.min(bounds.maxY, Math.max(bounds.minY, candidate.y))
+    };
+
+    if (target.x === previousTarget?.x && target.y === previousTarget?.y) {
+      return pickWanderTarget(bounds, previousTarget, nextRandom);
+    }
+    return target;
+  }
+
   globalThis.__vcp1Mode = {
     IDLE_DELAY_MS,
     isActive,
     shouldFollow,
     getWanderBounds,
     isWithinBounds,
-    pickWanderTarget
+    pickWanderTarget,
+    randomBetween,
+    wanderSpeed,
+    shouldSleepAfterWander,
+    pickNearbyWanderTarget
   };
 })();

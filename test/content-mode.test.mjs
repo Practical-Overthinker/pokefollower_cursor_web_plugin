@@ -58,3 +58,34 @@ test("a new wander target is not the previous target when alternatives exist", (
   assert.notDeepEqual(next, first);
   assert.equal(mode.isWithinBounds(next, bounds), true);
 });
+
+test("wander speed is derived from popup speed", () => {
+  assert.equal(mode.wanderSpeed(260), 130);
+});
+
+test("nearby targets stay safe and local", () => {
+  const bounds = mode.getWanderBounds({
+    viewportWidth: 800,
+    viewportHeight: 600,
+    spriteWidth: 40,
+    spriteHeight: 40,
+    scale: 1,
+    edgeMargin: 12
+  });
+  const origin = { x: 400, y: 300 };
+  const target = mode.pickNearbyWanderTarget(bounds, origin, null, 220, () => 0.5);
+  assert.equal(mode.isWithinBounds(target, bounds), true);
+  assert.ok(Math.hypot(target.x - origin.x, target.y - origin.y) <= 220);
+});
+
+test("sleep eligibility requires the sleep state, three stops, and the chance roll", () => {
+  assert.equal(mode.shouldSleepAfterWander({ hasSleep: false, destinations: 8, randomValue: 0 }), false);
+  assert.equal(mode.shouldSleepAfterWander({ hasSleep: true, destinations: 2, randomValue: 0 }), false);
+  assert.equal(mode.shouldSleepAfterWander({ hasSleep: true, destinations: 3, randomValue: 0.34 }), true);
+  assert.equal(mode.shouldSleepAfterWander({ hasSleep: true, destinations: 3, randomValue: 0.35 }), false);
+});
+
+test("random sleep duration stays between fifteen and sixty seconds", () => {
+  assert.equal(mode.randomBetween(15000, 60000, () => 0), 15000);
+  assert.equal(mode.randomBetween(15000, 60000, () => 1), 60000);
+});
