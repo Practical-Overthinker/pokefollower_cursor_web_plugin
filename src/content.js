@@ -506,10 +506,6 @@ function tick(dtMs) {
     RUNTIME.isWalking = true;
   } else {
     RUNTIME.isWalking = false;
-    if (RUNTIME.isWandering) {
-      RUNTIME.moveVel.x = 0;
-      RUNTIME.moveVel.y = 0;
-    }
   }
 
   const st = RUNTIME.meta.states[RUNTIME.anim.name];

@@ -103,3 +103,11 @@ test("popup places Wander Mode below Follow Mode", () => {
   assert.ok(html.indexOf("Follow Mode") < html.indexOf("Wander Mode"));
   assert.match(html, /\.mode-toggles\s*\{[^}]*flex-direction:\s*column/s);
 });
+
+test("wander facing is preserved when walking settles into idle", () => {
+  const source = fs.readFileSync(new URL("../src/content.js", import.meta.url), "utf8");
+  assert.doesNotMatch(
+    source,
+    /RUNTIME\.isWalking = false;\s*if \(RUNTIME\.isWandering\) \{\s*RUNTIME\.moveVel\.x = 0;/s
+  );
+});
