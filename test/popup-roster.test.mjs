@@ -7,6 +7,7 @@ import {
   normalizeRoster,
   removeRosterSlot,
   selectedIndexAfterRemoval,
+  selectedRosterIndex,
   setRosterPack
 } from "../src/popup/roster.js";
 
@@ -47,6 +48,13 @@ test("removing an extra slot compacts the roster but slot one is protected", () 
   assert.equal(selectedIndexAfterRemoval(1), 0);
 });
 
+test("startup selects the roster entry that matches the active pack", () => {
+  const roster = [BULBASAUR, CHARMANDER, SQUIRTLE];
+  assert.equal(selectedRosterIndex(roster, CHARMANDER), 1);
+  assert.equal(selectedRosterIndex(roster, BULBASAUR), 0);
+  assert.equal(selectedRosterIndex(roster, "retro/gen-1/999-missingno"), 0);
+});
+
 test("popup markup provides the slot strip and remove affordance contract", () => {
   const html = fs.readFileSync(new URL("../src/popup/index.html", import.meta.url), "utf8");
   assert.match(html, /class="brand-block"/);
@@ -64,6 +72,7 @@ test("popup controller is wired for roster storage and slot actions", () => {
   assert.match(popup, /vcp1_pack/);
   assert.match(popup, /rosterSlots/);
   assert.match(popup, /slot-remove/);
+  assert.match(popup, /selectedRosterIndex/);
 });
 
 test("selecting an occupied slot persists the active pack for the page", () => {

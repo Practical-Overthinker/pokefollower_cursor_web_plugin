@@ -37,3 +37,9 @@ export function removeRosterSlot(roster, index) {
 export function selectedIndexAfterRemoval(index) {
   return Math.max(0, index - 1);
 }
+
+export function selectedRosterIndex(roster, activePack) {
+  if (!Array.isArray(roster)) return 0;
+  const index = roster.indexOf(activePack);
+  return index >= 0 ? index : 0;
+}

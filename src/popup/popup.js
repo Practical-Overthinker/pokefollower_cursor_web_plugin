@@ -4,6 +4,7 @@ import {
   normalizeRoster,
   removeRosterSlot,
   selectedIndexAfterRemoval,
+  selectedRosterIndex,
   setRosterPack
 } from "./roster.js";
 
@@ -310,8 +311,9 @@ document.addEventListener("DOMContentLoaded", () => {
       enabledEl.checked = !!res.vcp1_enabled;
       wanderEl.checked = !!res.vcp1_wander;
       const hadRoster = Array.isArray(res.vcp1_packs) && res.vcp1_packs.length > 0;
-      roster = normalizeRoster(res.vcp1_packs, res.vcp1_pack || DEFAULT_PACK);
-      selectedSlot = 0;
+      const activePack = res.vcp1_pack || DEFAULT_PACK;
+      roster = normalizeRoster(res.vcp1_packs, activePack);
+      selectedSlot = selectedRosterIndex(roster, activePack);
       const storedPack = currentRosterPack();
 
       const scale  = normalizeStoredScale(res.vcp1_scale, res.vcp1_scale_version);
