@@ -2,6 +2,8 @@
 const DEFAULT_PACK = "retro/gen-1/009-blastoise";
 const GENERATION_DIRS = ["gen-1","gen-2","gen-3","gen-4","gen-5","gen-6","gen-7","gen-8","gen-9"];
 const MODE = globalThis.__vcp1Mode;
+const SCALE_BASE = 3;
+const SCALE_VERSION = 2;
 
 const STATE = {
   enabled: false,
@@ -56,10 +58,18 @@ function hasState(name) {
 }
 // --- UI-configurable tuning (persisted in chrome.storage.sync) ---
 const CONFIG = {
-  scale: 1.25,   // visual scale multiplier
+  scale: 1,      // normalized visual scale; 1 preserves the former 3x baseline
   offset: 30,    // px distance from cursor (trail/perch)
   lerp: 0.20     // follow smoothing (0..1), lower = floatier
 };
+function normalizeStoredScale(value, version) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return CONFIG.scale;
+  if (version === SCALE_VERSION) return value;
+  return Number((value / SCALE_BASE).toFixed(2));
+}
+function visualScale() {
+  return CONFIG.scale * SCALE_BASE;
+}
 function applyConfigPatch(obj = {}) {
   if (typeof obj.vcp1_scale  === "number" && !Number.isNaN(obj.vcp1_scale))  CONFIG.scale  = obj.vcp1_scale;
   if (typeof obj.vcp1_offset === "number" && !Number.isNaN(obj.vcp1_offset)) CONFIG.offset = obj.vcp1_offset;
@@ -148,7 +158,7 @@ function currentWanderBounds() {
     viewportHeight: window.innerHeight,
     spriteWidth: frame.w,
     spriteHeight: frame.h,
-    scale: CONFIG.scale,
+    scale: visualScale(),
     edgeMargin: WANDER_EDGE_MARGIN_PX
   });
 }
@@ -437,7 +447,7 @@ function applyFrame() {
   followerEl.style.imageRendering = "pixelated";
   followerEl.style.backgroundPosition = `${bpx}px ${bpy}px`;
 
-  const SCALE_VAL = CONFIG.scale;
+  const SCALE_VAL = visualScale();
   followerEl.style.transform =
     `translate(${Math.round(RUNTIME.pos.x)}px, ${Math.round(RUNTIME.pos.y)}px) ` +
     `translate(-50%, -50%) ` +
@@ -641,12 +651,18 @@ function applyState() {
 
 // boot
 chrome.storage.sync.get(
-  ["vcp1_enabled", "vcp1_wander", "vcp1_pack", "vcp1_scale", "vcp1_offset", "vcp1_lerp"],
+  ["vcp1_enabled", "vcp1_wander", "vcp1_pack", "vcp1_scale", "vcp1_scale_version", "vcp1_offset", "vcp1_lerp"],
   async (res) => {
     STATE.enabled = !!res.vcp1_enabled;
     STATE.wander  = !!res.vcp1_wander;
     STATE.pack    = res.vcp1_pack || DEFAULT_PACK;
-    applyConfigPatch(res);
+    const scale = normalizeStoredScale(res.vcp1_scale, res.vcp1_scale_version);
+    applyConfigPatch({ ...res, vcp1_scale: scale });
+    if (res.vcp1_scale_version !== SCALE_VERSION) {
+      try {
+        chrome.storage.sync.set({ vcp1_scale: scale, vcp1_scale_version: SCALE_VERSION });
+      } catch (_) {}
+    }
     try {
       await loadPack(STATE.pack);
     } catch (e) {

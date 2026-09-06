@@ -111,6 +111,17 @@ test("popup keeps stacked modes compact and readable", () => {
   assert.match(html, /\.mode-toggle\s*\{[^}]*font-size:\s*12px/s);
 });
 
+test("scale 1 keeps the previous 3x visual baseline", () => {
+  const popup = fs.readFileSync(new URL("../src/popup/popup.js", import.meta.url), "utf8");
+  const content = fs.readFileSync(new URL("../src/content.js", import.meta.url), "utf8");
+  assert.match(popup, /const SCALE_BASE = 3/);
+  assert.match(popup, /vcp1_scale:\s*1(?:\.0+)?\s*,/);
+  assert.match(popup, /vcp1_scale_version/);
+  assert.match(content, /const SCALE_BASE = 3/);
+  assert.match(content, /scale:\s*1(?:\.0+)?\s*,/);
+  assert.match(content, /CONFIG\.scale\s*\*\s*SCALE_BASE/);
+});
+
 test("wander facing is preserved when walking settles into idle", () => {
   const source = fs.readFileSync(new URL("../src/content.js", import.meta.url), "utf8");
   assert.doesNotMatch(

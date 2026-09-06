@@ -128,13 +128,20 @@ document.addEventListener("DOMContentLoaded", () => {
   const offsetVal = document.getElementById("offsetVal");
   const lerpVal   = document.getElementById("lerpVal");
   const previewSpriteEl = document.getElementById("previewSprite");
+  const SCALE_BASE = 3;
+  const SCALE_VERSION = 2;
 
-  // Defaults align with current content.js constants
+  // Scale 1 is the former scale 3 visual baseline.
   const DEFAULTS = {
-    vcp1_scale: 1.25,   // SCALE
+    vcp1_scale: 1,
     vcp1_offset: 30,    // OFFSET_PX
     vcp1_lerp: 0.20     // LERP_ALPHA (lower = floatier/slower follow)
   };
+  function normalizeStoredScale(value, version) {
+    if (typeof value !== "number" || !Number.isFinite(value)) return DEFAULTS.vcp1_scale;
+    if (version === SCALE_VERSION) return value;
+    return Number((value / SCALE_BASE).toFixed(2));
+  }
 
   // --- Hot-path local writes + dragging signal for smooth live updates ---
   const setLocal = (patch) => chrome.storage.local.set(patch);
@@ -176,15 +183,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Load saved settings
   chrome.storage.sync.get(
-    ["vcp1_enabled", "vcp1_wander", "vcp1_pack", "vcp1_scale", "vcp1_offset", "vcp1_lerp"],
+    ["vcp1_enabled", "vcp1_wander", "vcp1_pack", "vcp1_scale", "vcp1_scale_version", "vcp1_offset", "vcp1_lerp"],
     (res) => {
       enabledEl.checked = !!res.vcp1_enabled;
       wanderEl.checked = !!res.vcp1_wander;
       const storedPack  = res.vcp1_pack || DEFAULT_PACK;
 
-      const scale  = (typeof res.vcp1_scale  === "number") ? res.vcp1_scale  : DEFAULTS.vcp1_scale;
+      const scale  = normalizeStoredScale(res.vcp1_scale, res.vcp1_scale_version);
       const offset = (typeof res.vcp1_offset === "number") ? res.vcp1_offset : DEFAULTS.vcp1_offset;
       const lerp   = (typeof res.vcp1_lerp   === "number") ? res.vcp1_lerp   : DEFAULTS.vcp1_lerp;
+
+      if (res.vcp1_scale_version !== SCALE_VERSION) {
+        chrome.storage.sync.set({ vcp1_scale: scale, vcp1_scale_version: SCALE_VERSION });
+      }
 
       scaleEl.value  = String(scale);
       offsetEl.value = String(offset);
@@ -547,7 +558,7 @@ document.addEventListener("DOMContentLoaded", () => {
     scaleEl.value = normalized.toFixed(2);
     scaleVal.textContent = normalized.toFixed(2) + "×";
     setLocal({ vcp1_scale: normalized });
-    pushConfig({ vcp1_scale: normalized }, { flush });
+    pushConfig({ vcp1_scale: normalized, vcp1_scale_version: SCALE_VERSION }, { flush });
   }
   scaleEl.addEventListener("input", previewScale);
   scaleEl.addEventListener("change", () => commitScale({ flush: true }));
