@@ -65,3 +65,11 @@ test("popup controller is wired for roster storage and slot actions", () => {
   assert.match(popup, /rosterSlots/);
   assert.match(popup, /slot-remove/);
 });
+
+test("selecting an occupied slot persists the active pack for the page", () => {
+  const popup = fs.readFileSync(new URL("../src/popup/popup.js", import.meta.url), "utf8");
+  const start = popup.indexOf("function selectRosterSlot");
+  const end = popup.indexOf("\n  function openRosterSlot", start);
+  assert.ok(start >= 0 && end > start);
+  assert.match(popup.slice(start, end), /persistRoster\(\)/);
+});

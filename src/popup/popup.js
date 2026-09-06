@@ -103,6 +103,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function selectRosterSlot(index) {
     if (!Number.isInteger(index) || index < 0 || index >= roster.length) return;
     selectedSlot = index;
+    persistRoster();
     renderRosterSlots();
     showRosterPack(currentRosterPack());
   }
