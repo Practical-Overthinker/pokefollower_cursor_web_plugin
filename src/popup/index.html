@@ -80,7 +80,7 @@
       background: #fff; border: 1px solid #000; border-radius: 50%;
     }
 
-    /* Header row: brand left, enable toggle right */
+    /* Header row: brand left, mode toggles right */
     .header {
       position: relative;
       height: 26px;
@@ -92,28 +92,36 @@
     .brand { 
       font-weight: 600; font-style: normal; font-size: 12px; letter-spacing: .05em;
     }
-    .enable {
-      font-weight: 600; font-size: 12px;
+    .mode-toggles {
+      display: inline-flex; align-items: center; gap: 9px;
+    }
+    .mode-toggle {
+      font-weight: 600; font-size: 10px;
       display: inline-grid; grid-auto-flow: column; align-items: center; gap: 6px;
+      white-space: nowrap;
     }
 
     /* Turn the checkbox into the Pokéball toggle */
-    #enabled {
+    .mode-toggle input[type="checkbox"] {
       appearance: none; -webkit-appearance: none;
       width: 36px; height: 18px;
       border: 1.5px solid #000; border-radius: 18px;
       background: #fff; position: relative; display: inline-block; cursor: pointer; outline: none;
     }
     /* switch knob (mini Pokéball) */
-    #enabled::after {
+    .mode-toggle input[type="checkbox"]::after {
       content: "";
       position: absolute; top: 50%; left: -4px; transform: translateY(-50%);
       width: 18px; height: 18px; border-radius: 50%;
       border: 2px solid #000; background: linear-gradient(to bottom, #EF4036 50%, #fff 50%);
     }
     /* ON state */
-    #enabled:checked { background: #EF4036; }
-    #enabled:checked::after { left: calc(100% - 18px); }
+    .mode-toggle input[type="checkbox"]:checked { background: #EF4036; }
+    .mode-toggle input[type="checkbox"]:checked::after { left: calc(100% - 18px); }
+    .mode-toggle input[type="checkbox"]:focus-visible {
+      outline: 2px solid #000;
+      outline-offset: 2px;
+    }
     /* Card body */
     .card { padding: 10px 16px 0; }
 
@@ -331,10 +339,16 @@
   <!-- Header -->
   <div class="header">
     <div class="brand">PokeFollower v4.0</div>
-    <label class="enable" for="enabled">
-      <span>Enable Follower</span>
-      <input id="enabled" type="checkbox" />
-    </label>
+    <div class="mode-toggles" role="group" aria-label="Follower modes">
+      <label class="mode-toggle" for="enabled">
+        <span>Follow Mode</span>
+        <input id="enabled" type="checkbox" />
+      </label>
+      <label class="mode-toggle" for="wander">
+        <span>Wander Mode</span>
+        <input id="wander" type="checkbox" />
+      </label>
+    </div>
   </div>
 
   <div class="card">

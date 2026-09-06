@@ -2,6 +2,7 @@ const DEFAULT_PACK = "retro/gen-1/001-bulbasaur";
 
 document.addEventListener("DOMContentLoaded", () => {
   const enabledEl = document.getElementById("enabled");
+  const wanderEl  = document.getElementById("wander");
   const packEl    = document.getElementById("pack");
   const pickerEl  = document.querySelector(".picker");
   const searchBtn = pickerEl ? pickerEl.querySelector(".glass") : null;
@@ -175,9 +176,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Load saved settings
   chrome.storage.sync.get(
-    ["vcp1_enabled", "vcp1_pack", "vcp1_scale", "vcp1_offset", "vcp1_lerp"],
+    ["vcp1_enabled", "vcp1_wander", "vcp1_pack", "vcp1_scale", "vcp1_offset", "vcp1_lerp"],
     (res) => {
       enabledEl.checked = !!res.vcp1_enabled;
+      wanderEl.checked = !!res.vcp1_wander;
       const storedPack  = res.vcp1_pack || DEFAULT_PACK;
 
       const scale  = (typeof res.vcp1_scale  === "number") ? res.vcp1_scale  : DEFAULTS.vcp1_scale;
@@ -215,6 +217,12 @@ document.addEventListener("DOMContentLoaded", () => {
   // Toggle enable — close popup (people expect immediate feedback here)
   enabledEl.addEventListener("change", () => {
     save({ vcp1_enabled: enabledEl.checked });
+    window.close();
+  });
+
+  // Wander Mode uses its own setting but follows the same immediate feedback behavior.
+  wanderEl.addEventListener("change", () => {
+    save({ vcp1_wander: wanderEl.checked });
     window.close();
   });
 
