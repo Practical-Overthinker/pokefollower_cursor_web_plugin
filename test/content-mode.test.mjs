@@ -163,3 +163,13 @@ test("wander facing is preserved when walking settles into idle", () => {
     /RUNTIME\.isWalking = false;\s*if \(RUNTIME\.isWandering\) \{\s*RUNTIME\.moveVel\.x = 0;/s
   );
 });
+
+test("content runtime reads the roster and keeps Individual mode single-actor", () => {
+  const source = fs.readFileSync(new URL("../src/content.js", import.meta.url), "utf8");
+  assert.match(source, /vcp1_packs/);
+  assert.match(source, /vcp1_roster_mode/);
+  assert.match(source, /function createFollowerRuntime/);
+  assert.match(source, /const ACTORS\s*=\s*\[\]/);
+  assert.match(source, /function activePackKeys/);
+  assert.match(source, /rosterMode === "individual"/);
+});

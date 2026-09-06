@@ -1,6 +1,6 @@
-// === VCP1 content script: load pack JSON + animate idle/walk with left/right flip ===
+// === VCP1 content script: load pack JSON + animate one or more followers ===
 const DEFAULT_PACK = "retro/gen-1/009-blastoise";
-const GENERATION_DIRS = ["gen-1","gen-2","gen-3","gen-4","gen-5","gen-6","gen-7","gen-8","gen-9"];
+const GENERATION_DIRS = ["gen-1", "gen-2", "gen-3", "gen-4", "gen-5", "gen-6", "gen-7", "gen-8", "gen-9"];
 const MODE = globalThis.__vcp1Mode;
 const SCALE_BASE = 3;
 const SCALE_VERSION = 2;
@@ -8,42 +8,45 @@ const SCALE_VERSION = 2;
 const STATE = {
   enabled: false,
   wander: false,
-  pack: DEFAULT_PACK,  // default
-  facingLeft: false
+  pack: DEFAULT_PACK,
+  packs: [DEFAULT_PACK],
+  rosterMode: "individual"
 };
 
-let followerEl = null;
-let rafId = null;
-let running = false;
-
-const RUNTIME = {
-  meta: null,                 // loaded JSON pack
-  images: {},                 // { idle: Image, walk: Image }
-  anim: { name: "idle", frame: 0, row: 0, accMs: 0 },
+const POINTER = {
   lastMoveTs: 0,
   lastMouse: { x: 0, y: 0, t: 0 },
-  wanderTarget: null,
-  isWandering: false,
-  moveVel: { x: 0, y: 0 },
-  wanderPhase: "roam",
-  wanderIdleUntil: 0,
-  wanderSleepUntil: 0,
-  wanderDestinations: 0,
-
-  // position/target and smoothed velocity
-  pos:       { x: 0, y: 0 },
-  target:    { x: 0, y: 0 },
-  offsetDir:    { x: 0, y: -1 }, // lerped unit vector for idle→walk glide (perch placement)
-  isWalking:    false,           // true while the follower is actively walking toward its target
-  pendingState: null,             // { name, queuedAt } — deferred state switch
-  velAvg:    { x: 0, y: 0 },
-  speedAvg:  0
+  velAvg: { x: 0, y: 0 },
+  speedAvg: 0
 };
 
+const ACTORS = [];
+let rafId = null;
+let running = false;
+let rebuildToken = 0;
+
+function createFollowerRuntime() {
+  return {
+    anim: { name: "idle", frame: 0, row: 0, accMs: 0 },
+    wanderTarget: null,
+    isWandering: false,
+    moveVel: { x: 0, y: 0 },
+    wanderPhase: "roam",
+    wanderIdleUntil: 0,
+    wanderSleepUntil: 0,
+    wanderDestinations: 0,
+    pos: { x: 0, y: 0 },
+    target: { x: 0, y: 0 },
+    offsetDir: { x: 0, y: -1 },
+    isWalking: false,
+    pendingState: null
+  };
+}
+
 // --- behavior thresholds ---
-const SLEEP_TIMEOUT_MS = 30000; // 30s of no movement -> sleep
-const ARRIVE_RADIUS_PX = 6;     // close enough to target to call it "arrived" and settle into idle
-const SLOW_RADIUS_PX   = 60;    // ease walking speed down within this distance for a soft landing
+const SLEEP_TIMEOUT_MS = 30000;
+const ARRIVE_RADIUS_PX = 6;
+const SLOW_RADIUS_PX = 60;
 const WANDER_IDLE_MIN_MS = 1500;
 const WANDER_IDLE_MAX_MS = 4500;
 const WANDER_SLEEP_MIN_MS = 15000;
@@ -53,36 +56,39 @@ const WANDER_SLEEP_MIN_DESTINATIONS = 3;
 const WANDER_SLEEP_CHANCE = 0.35;
 const WANDER_EDGE_MARGIN_PX = 12;
 
-function hasState(name) {
-  return !!(RUNTIME.meta && RUNTIME.meta.states && RUNTIME.meta.states[name]);
+function hasState(actor, name) {
+  return !!(actor?.meta?.states && actor.meta.states[name]);
 }
+
 // --- UI-configurable tuning (persisted in chrome.storage.sync) ---
 const CONFIG = {
-  scale: 1,      // normalized visual scale; 1 preserves the former 3x baseline
-  offset: 30,    // px distance from cursor (trail/perch)
-  lerp: 0.20     // follow smoothing (0..1), lower = floatier
+  scale: 1,
+  offset: 30,
+  lerp: 0.20
 };
+
 function normalizeStoredScale(value, version) {
   if (typeof value !== "number" || !Number.isFinite(value)) return CONFIG.scale;
   if (version === SCALE_VERSION) return value;
   return Number((value / SCALE_BASE).toFixed(2));
 }
+
 function visualScale() {
   return CONFIG.scale * SCALE_BASE;
 }
+
 function applyConfigPatch(obj = {}) {
-  if (typeof obj.vcp1_scale  === "number" && !Number.isNaN(obj.vcp1_scale))  CONFIG.scale  = obj.vcp1_scale;
+  if (typeof obj.vcp1_scale === "number" && !Number.isNaN(obj.vcp1_scale)) CONFIG.scale = obj.vcp1_scale;
   if (typeof obj.vcp1_offset === "number" && !Number.isNaN(obj.vcp1_offset)) CONFIG.offset = obj.vcp1_offset;
-  if (typeof obj.vcp1_lerp   === "number" && !Number.isNaN(obj.vcp1_lerp))   CONFIG.lerp   = obj.vcp1_lerp;
+  if (typeof obj.vcp1_lerp === "number" && !Number.isNaN(obj.vcp1_lerp)) CONFIG.lerp = obj.vcp1_lerp;
 }
 
-// Map the popup's "SPEED" slider (stored/transmitted as vcp1_lerp, internal range ~0.05–0.50)
-// onto a walking speed in px/s, so the follower travels at a steady, natural pace
-// instead of being eased toward a moving point (which is what produced the "leash" drag).
-const WALK_SPEED_MIN_PXPS = 80;   // px/s at the slowest "speed" setting
-const WALK_SPEED_MAX_PXPS = 640;  // px/s at the fastest "speed" setting
+// Map the popup's SPEED value onto a steady walking speed in px/s.
+const WALK_SPEED_MIN_PXPS = 80;
+const WALK_SPEED_MAX_PXPS = 640;
 const SPEED_CONFIG_MIN = 0.05;
 const SPEED_CONFIG_MAX = 0.50;
+
 function walkSpeedFromConfig() {
   const t = (CONFIG.lerp - SPEED_CONFIG_MIN) / (SPEED_CONFIG_MAX - SPEED_CONFIG_MIN);
   const clamped = Math.min(1, Math.max(0, t));
@@ -92,22 +98,24 @@ function walkSpeedFromConfig() {
 // --- Live poller for smooth slider updates during popup drag ---
 let LIVE = { dragging: false, pollId: null };
 
+function applyFrames() {
+  ACTORS.forEach(applyFrame);
+}
+
 function startLocalPoll() {
-  if (LIVE.pollId) return; // already polling
-  // Poll at ~30Hz to decouple rendering from popup focus/message cadence
+  if (LIVE.pollId) return;
   LIVE.pollId = setInterval(() => {
-    chrome.storage.local.get(["vcp1_scale","vcp1_offset","vcp1_lerp"], (res) => {
-      // Only apply present numeric values
+    chrome.storage.local.get(["vcp1_scale", "vcp1_offset", "vcp1_lerp"], (res) => {
       const patch = {};
-      if (typeof res.vcp1_scale  === "number")  patch.vcp1_scale  = res.vcp1_scale;
-      if (typeof res.vcp1_offset === "number")  patch.vcp1_offset = res.vcp1_offset;
-      if (typeof res.vcp1_lerp   === "number")  patch.vcp1_lerp   = res.vcp1_lerp;
+      if (typeof res.vcp1_scale === "number") patch.vcp1_scale = res.vcp1_scale;
+      if (typeof res.vcp1_offset === "number") patch.vcp1_offset = res.vcp1_offset;
+      if (typeof res.vcp1_lerp === "number") patch.vcp1_lerp = res.vcp1_lerp;
       if (Object.keys(patch).length) {
         applyConfigPatch(patch);
-        if (followerEl && RUNTIME.meta) applyFrame();
+        applyFrames();
       }
     });
-  }, 33); // ~30fps
+  }, 33);
 }
 
 function stopLocalPoll() {
@@ -116,43 +124,44 @@ function stopLocalPoll() {
     LIVE.pollId = null;
   }
 }
-// --- follow targeting: trail the cursor when moving; perch above when idle
-function computeFollowTarget() {
-  const speed = RUNTIME.speedAvg || 0;
-  const hasDir = speed > 40;
-  const OFFSET = CONFIG.offset;
 
-  // Desired offset direction (unit vector)
-  let desiredX, desiredY;
+// --- follow targeting: trail the cursor when moving; perch above when idle ---
+function computeFollowTarget(actor) {
+  const runtime = actor.runtime;
+  const speed = POINTER.speedAvg || 0;
+  const hasDir = speed > 40;
+  const offset = CONFIG.offset;
+  let desiredX;
+  let desiredY;
+
   if (hasDir) {
-    desiredX = -(RUNTIME.velAvg.x / (speed || 1));
-    desiredY = -(RUNTIME.velAvg.y / (speed || 1));
+    desiredX = -(POINTER.velAvg.x / (speed || 1));
+    desiredY = -(POINTER.velAvg.y / (speed || 1));
   } else {
     desiredX = 0;
-    desiredY = -1; // idle: above cursor
+    desiredY = -1;
   }
 
-  // Lerp offset direction so idle→walk transition glides instead of snapping
-  const OD_LERP = 0.08;
-  RUNTIME.offsetDir.x += (desiredX - RUNTIME.offsetDir.x) * OD_LERP;
-  RUNTIME.offsetDir.y += (desiredY - RUNTIME.offsetDir.y) * OD_LERP;
-
-  RUNTIME.target.x = (RUNTIME.lastMouse?.x || 0) + RUNTIME.offsetDir.x * OFFSET;
-  RUNTIME.target.y = (RUNTIME.lastMouse?.y || 0) + RUNTIME.offsetDir.y * OFFSET;
+  const directionLerp = 0.08;
+  runtime.offsetDir.x += (desiredX - runtime.offsetDir.x) * directionLerp;
+  runtime.offsetDir.y += (desiredY - runtime.offsetDir.y) * directionLerp;
+  runtime.target.x = (POINTER.lastMouse.x || 0) + runtime.offsetDir.x * offset;
+  runtime.target.y = (POINTER.lastMouse.y || 0) + runtime.offsetDir.y * offset;
 }
 
-function resetWanderState() {
-  RUNTIME.wanderTarget = null;
-  RUNTIME.wanderPhase = "roam";
-  RUNTIME.wanderIdleUntil = 0;
-  RUNTIME.wanderSleepUntil = 0;
-  RUNTIME.wanderDestinations = 0;
-  RUNTIME.moveVel.x = 0;
-  RUNTIME.moveVel.y = 0;
+function resetWanderState(actor) {
+  const runtime = actor.runtime;
+  runtime.wanderTarget = null;
+  runtime.wanderPhase = "roam";
+  runtime.wanderIdleUntil = 0;
+  runtime.wanderSleepUntil = 0;
+  runtime.wanderDestinations = 0;
+  runtime.moveVel.x = 0;
+  runtime.moveVel.y = 0;
 }
 
-function currentWanderBounds() {
-  const frame = RUNTIME.meta?.states?.idle?.frame || RUNTIME.meta?.states?.walk?.frame || { w: 40, h: 40 };
+function currentWanderBounds(actor) {
+  const frame = actor.meta?.states?.idle?.frame || actor.meta?.states?.walk?.frame || { w: 40, h: 40 };
   return MODE.getWanderBounds({
     viewportWidth: window.innerWidth,
     viewportHeight: window.innerHeight,
@@ -163,144 +172,128 @@ function currentWanderBounds() {
   });
 }
 
-function chooseWanderTarget(bounds = currentWanderBounds()) {
-  RUNTIME.wanderTarget = MODE.pickNearbyWanderTarget(
+function chooseWanderTarget(actor, bounds = currentWanderBounds(actor)) {
+  const runtime = actor.runtime;
+  runtime.wanderTarget = MODE.pickNearbyWanderTarget(
     bounds,
-    RUNTIME.pos,
-    RUNTIME.wanderTarget,
+    runtime.pos,
+    runtime.wanderTarget,
     WANDER_MAX_STEP_PX
   );
-  return RUNTIME.wanderTarget;
+  return runtime.wanderTarget;
 }
 
-function reachedWanderTarget() {
+function reachedWanderTarget(actor) {
+  const runtime = actor.runtime;
   return Math.hypot(
-    RUNTIME.wanderTarget.x - RUNTIME.pos.x,
-    RUNTIME.wanderTarget.y - RUNTIME.pos.y
+    runtime.wanderTarget.x - runtime.pos.x,
+    runtime.wanderTarget.y - runtime.pos.y
   ) <= ARRIVE_RADIUS_PX;
 }
 
-function computeWanderTarget(now) {
-  const bounds = currentWanderBounds();
-  if (RUNTIME.wanderTarget && !MODE.isWithinBounds(RUNTIME.wanderTarget, bounds)) {
-    RUNTIME.wanderTarget = null;
-    RUNTIME.wanderPhase = "roam";
-    RUNTIME.wanderIdleUntil = 0;
+function computeWanderTarget(actor, now) {
+  const runtime = actor.runtime;
+  const bounds = currentWanderBounds(actor);
+  if (runtime.wanderTarget && !MODE.isWithinBounds(runtime.wanderTarget, bounds)) {
+    runtime.wanderTarget = null;
+    runtime.wanderPhase = "roam";
+    runtime.wanderIdleUntil = 0;
   }
 
-  if (RUNTIME.wanderPhase === "sleep") {
-    RUNTIME.target.x = RUNTIME.pos.x;
-    RUNTIME.target.y = RUNTIME.pos.y;
-    if (now < RUNTIME.wanderSleepUntil) return;
-    RUNTIME.wanderPhase = "roam";
-    RUNTIME.wanderSleepUntil = 0;
-    RUNTIME.wanderDestinations = 0;
-    RUNTIME.wanderTarget = null;
+  if (runtime.wanderPhase === "sleep") {
+    runtime.target.x = runtime.pos.x;
+    runtime.target.y = runtime.pos.y;
+    if (now < runtime.wanderSleepUntil) return;
+    runtime.wanderPhase = "roam";
+    runtime.wanderSleepUntil = 0;
+    runtime.wanderDestinations = 0;
+    runtime.wanderTarget = null;
   }
 
-  if (!RUNTIME.wanderTarget) chooseWanderTarget(bounds);
+  if (!runtime.wanderTarget) chooseWanderTarget(actor, bounds);
 
-  if (RUNTIME.wanderPhase === "roam" && reachedWanderTarget()) {
-    RUNTIME.wanderPhase = "idle";
-    RUNTIME.wanderIdleUntil = now + MODE.randomBetween(WANDER_IDLE_MIN_MS, WANDER_IDLE_MAX_MS);
+  if (runtime.wanderPhase === "roam" && reachedWanderTarget(actor)) {
+    runtime.wanderPhase = "idle";
+    runtime.wanderIdleUntil = now + MODE.randomBetween(WANDER_IDLE_MIN_MS, WANDER_IDLE_MAX_MS);
   }
 
-  if (RUNTIME.wanderPhase === "idle") {
-    RUNTIME.target.x = RUNTIME.pos.x;
-    RUNTIME.target.y = RUNTIME.pos.y;
-    if (now < RUNTIME.wanderIdleUntil) return;
+  if (runtime.wanderPhase === "idle") {
+    runtime.target.x = runtime.pos.x;
+    runtime.target.y = runtime.pos.y;
+    if (now < runtime.wanderIdleUntil) return;
 
-    RUNTIME.wanderIdleUntil = 0;
-    RUNTIME.wanderDestinations += 1;
+    runtime.wanderIdleUntil = 0;
+    runtime.wanderDestinations += 1;
     if (MODE.shouldSleepAfterWander({
-      hasSleep: hasState("sleep"),
-      destinations: RUNTIME.wanderDestinations,
+      hasSleep: hasState(actor, "sleep"),
+      destinations: runtime.wanderDestinations,
       randomValue: Math.random(),
       minDestinations: WANDER_SLEEP_MIN_DESTINATIONS,
       chance: WANDER_SLEEP_CHANCE
     })) {
-      RUNTIME.wanderPhase = "sleep";
-      RUNTIME.wanderSleepUntil = now + MODE.randomBetween(WANDER_SLEEP_MIN_MS, WANDER_SLEEP_MAX_MS);
-      RUNTIME.target.x = RUNTIME.pos.x;
-      RUNTIME.target.y = RUNTIME.pos.y;
+      runtime.wanderPhase = "sleep";
+      runtime.wanderSleepUntil = now + MODE.randomBetween(WANDER_SLEEP_MIN_MS, WANDER_SLEEP_MAX_MS);
+      runtime.target.x = runtime.pos.x;
+      runtime.target.y = runtime.pos.y;
       return;
     }
 
-    RUNTIME.wanderPhase = "roam";
-    chooseWanderTarget(bounds);
+    runtime.wanderPhase = "roam";
+    chooseWanderTarget(actor, bounds);
   }
 
-  RUNTIME.target.x = RUNTIME.wanderTarget.x;
-  RUNTIME.target.y = RUNTIME.wanderTarget.y;
+  runtime.target.x = runtime.wanderTarget.x;
+  runtime.target.y = runtime.wanderTarget.y;
 }
 
-function computeTarget(now) {
+function computeTarget(actor, index, now) {
+  const runtime = actor.runtime;
   const following = MODE.shouldFollow({
     followMode: STATE.enabled,
     wanderMode: STATE.wander,
-    lastMoveTs: RUNTIME.lastMoveTs,
+    lastMoveTs: POINTER.lastMoveTs,
     now
   });
-  RUNTIME.isWandering = STATE.wander && !following;
-  if (following) {
-    resetWanderState();
-    computeFollowTarget();
-  } else {
-    computeWanderTarget(now);
+  runtime.isWandering = STATE.wander && !following;
+
+  if (!following) {
+    computeWanderTarget(actor, now);
+    return;
   }
+
+  resetWanderState(actor);
+  computeFollowTarget(actor);
 }
 
 // --- 8-way facing from a direction vector (octants) ---
 function pickDir8FromVector(vx, vy) {
-  const dead = 0.3; // small deadzone to reduce jitter
+  const dead = 0.3;
   if (Math.abs(vx) <= dead && Math.abs(vy) <= dead) return "front";
-  // DOM coords: +y is downward => vy>0 means "front"
-  const angle = Math.atan2(vy, vx);                  // -PI..PI, 0 = right
-  const norm  = (angle + 2 * Math.PI) % (2 * Math.PI); // 0..2PI
-  const idx   = Math.floor((norm + Math.PI / 8) / (Math.PI / 4)) % 8;
-  // clockwise from right
-  const keys8 = [
-    "right",      // 0
-    "frontRight", // 1
-    "front",      // 2
-    "frontLeft",  // 3
-    "left",       // 4
-    "backLeft",   // 5
-    "back",       // 6
-    "backRight"   // 7
-  ];
-  return keys8[idx];
+  const angle = Math.atan2(vy, vx);
+  const norm = (angle + 2 * Math.PI) % (2 * Math.PI);
+  const idx = Math.floor((norm + Math.PI / 8) / (Math.PI / 4)) % 8;
+  return ["right", "frontRight", "front", "frontLeft", "left", "backLeft", "back", "backRight"][idx];
 }
 
-// Map that direction to a row index using the pack's rows table for the given state
-function pickRowForState(stateName) {
-  const st = RUNTIME.meta?.states?.[stateName];
+function pickRowForState(actor, stateName) {
+  const st = actor.meta?.states?.[stateName];
   if (!st) return 0;
   const rows = st.rows || { front: 0 };
-
-  // Prefer 8-way if present, else fall back to nearest cardinal.
-  // Face based on the cursor's own direction of travel — the follower's path
-  // can lag/curve while it catches up, but it should still visibly look like
-  // it's heading toward (or alongside) the cursor, not its own catch-up route.
-  const direction = RUNTIME.isWandering ? RUNTIME.moveVel : RUNTIME.velAvg;
+  const direction = actor.runtime.isWandering ? actor.runtime.moveVel : POINTER.velAvg;
   const dir8 = pickDir8FromVector(direction.x, direction.y);
   if (dir8 in rows) return rows[dir8];
-
-  // Map diagonal to nearest cardinal if diagonal key missing
   const fallbackMap = {
     frontRight: "front",
-    frontLeft:  "front",
-    backRight:  "back",
-    backLeft:   "back"
+    frontLeft: "front",
+    backRight: "back",
+    backLeft: "back"
   };
-  const fallback = fallbackMap[dir8] || dir8; // if already cardinal, keep it
-  return (fallback in rows) ? rows[fallback] : (rows.front ?? 0);
+  const fallback = fallbackMap[dir8] || dir8;
+  return fallback in rows ? rows[fallback] : (rows.front ?? 0);
 }
 
 // Once the extension is reloaded/updated, tabs that already had this content
-// script injected lose their connection to it — chrome.runtime.id becomes
-// undefined and any chrome.* call throws "Extension context invalidated".
-// Checking this lets us shut down quietly instead of throwing on every frame.
+// script injected lose their connection to it. Shut down quietly in that case.
 function isExtensionContextValid() {
   try {
     return !!(chrome.runtime && chrome.runtime.id);
@@ -309,13 +302,15 @@ function isExtensionContextValid() {
   }
 }
 
-function extUrl(rel) { return chrome.runtime.getURL(rel); }
+function extUrl(rel) {
+  return chrome.runtime.getURL(rel);
+}
 
-function createFollower() {
-  if (followerEl) return;
-  followerEl = document.createElement("div");
-  followerEl.id = "__vcp1_follower";
-  Object.assign(followerEl.style, {
+function createFollower(actor, index) {
+  if (actor.element) return;
+  const element = document.createElement("div");
+  element.id = `__vcp1_follower_${index}`;
+  Object.assign(element.style, {
     position: "fixed",
     left: "0px",
     top: "0px",
@@ -325,22 +320,22 @@ function createFollower() {
     zIndex: "2147483647",
     willChange: "transform, background-position, background-image",
     backgroundRepeat: "no-repeat",
-    imageRendering: "pixelated", // crisp for retro sheets
+    imageRendering: "pixelated",
     transition: "transform 120ms linear, width 120ms linear, height 120ms linear"
   });
-  document.documentElement.appendChild(followerEl);
+  document.documentElement.appendChild(element);
+  actor.element = element;
 }
 
-function removeFollower() {
-  if (followerEl?.parentNode) followerEl.parentNode.removeChild(followerEl);
-  followerEl = null;
-  if (rafId) cancelAnimationFrame(rafId);
-  rafId = null;
+function removeActorElements() {
+  ACTORS.forEach((actor) => {
+    if (actor.element?.parentNode) actor.element.parentNode.removeChild(actor.element);
+    actor.element = null;
+  });
 }
 
-function packSlug() {
-  // STATE.pack like "retro/gen-1/009-blastoise" -> "009-blastoise"
-  const parts = STATE.pack.split("/");
+function packSlug(packKey = STATE.pack) {
+  const parts = String(packKey || DEFAULT_PACK).split("/");
   return parts[parts.length - 1];
 }
 
@@ -351,7 +346,7 @@ function dexFromSlug(slug) {
 
 function generationForDex(dex) {
   if (!Number.isFinite(dex)) return null;
-  if (dex >= 1 && dex <= 151) return "gen-1";
+  if (dex <= 151) return "gen-1";
   if (dex <= 251) return "gen-2";
   if (dex <= 386) return "gen-3";
   if (dex <= 493) return "gen-4";
@@ -370,8 +365,7 @@ function buildPackCandidates(packKey) {
     const parts = clean.split("/");
     const slug = parts.pop();
     const prefix = parts.join("/");
-    const dex = dexFromSlug(slug);
-    const inferred = generationForDex(dex);
+    const inferred = generationForDex(dexFromSlug(slug));
     const pushCandidate = (gen) => {
       const candidate = `${prefix}/${gen}/${slug}`;
       if (!candidates.includes(candidate)) candidates.push(candidate);
@@ -397,149 +391,124 @@ async function fetchPackMeta(packKey) {
   return meta;
 }
 
-function sheetUrlFor(stateName) {
-  const st = RUNTIME.meta && RUNTIME.meta.states ? RUNTIME.meta.states[stateName] : null;
-  const sheetFilename = st && st.sheet ? st.sheet : "";
-  const metaPath = typeof RUNTIME.meta?.rawPath === "string" ? RUNTIME.meta.rawPath.trim() : "";
-  const slug = metaPath ? metaPath.replace(/^\/+|\/+$/g, "") : packSlug();
-  const rawFolder = `assets/raw/${slug}/`;
-  return extUrl(rawFolder + sheetFilename);
+function sheetUrlFor(actor, stateName) {
+  const state = actor.meta?.states?.[stateName];
+  const sheetFilename = state?.sheet || "";
+  const metaPath = typeof actor.meta?.rawPath === "string" ? actor.meta.rawPath.trim() : "";
+  const slug = metaPath ? metaPath.replace(/^\/+|\/+$/g, "") : packSlug(actor.packKey);
+  return extUrl(`assets/raw/${slug}/${sheetFilename}`);
 }
 
-function ensureImagesLoaded(meta) {
+function ensureImagesLoaded(actor) {
   const tasks = [];
-  Object.keys(meta.states).forEach((k) => {
+  Object.keys(actor.meta.states).forEach((stateName) => {
     const img = new Image();
-    img.src = sheetUrlFor(k);
-    RUNTIME.images[k] = img;
+    img.src = sheetUrlFor(actor, stateName);
+    actor.images[stateName] = img;
     tasks.push(new Promise((resolve) => {
-      img.onload = resolve; img.onerror = resolve;
+      img.onload = resolve;
+      img.onerror = resolve;
     }));
   });
   return Promise.all(tasks);
 }
-function resetAnimationForNewPack() {
-  // Start from idle; row will be resolved in tick() via pickRowForState
-  RUNTIME.anim = { name: "idle", frame: 0, row: 0, accMs: 0 };
+
+function resetAnimationForNewPack(actor) {
+  actor.runtime.anim = { name: "idle", frame: 0, row: 0, accMs: 0 };
 }
 
-function applyFrame() {
-  const st = RUNTIME.meta && RUNTIME.meta.states && RUNTIME.meta.states[RUNTIME.anim.name];
-  if (!st || !st.frame || typeof st.frames !== "number" || !Number.isFinite(st.frames)) {
-    // Defensive: if pack schema is missing or wrong, skip this frame rather than crash
-    return;
-  }
-  const { w, h } = st.frame;
-  const frame = RUNTIME.anim.frame % st.frames;
-  const rowIndex = RUNTIME.anim.row || 0;
-  const bpx = -(frame * w);
-  const bpy = -(rowIndex * h);
+function applyFrame(actor) {
+  const element = actor.element;
+  const runtime = actor.runtime;
+  const state = actor.meta?.states?.[runtime.anim.name];
+  if (!element || !state || !state.frame || typeof state.frames !== "number" || !Number.isFinite(state.frames)) return;
 
-  followerEl.style.width  = `${w}px`;
-  followerEl.style.height = `${h}px`;
-  followerEl.style.backgroundImage = `url("${sheetUrlFor(RUNTIME.anim.name)}")`;
-  // Keep sheet at natural size so backgroundPosition aligns to frame pixels
-  const img = RUNTIME.images[RUNTIME.anim.name];
+  const { w, h } = state.frame;
+  const frame = runtime.anim.frame % state.frames;
+  const rowIndex = runtime.anim.row || 0;
+  element.style.width = `${w}px`;
+  element.style.height = `${h}px`;
+  element.style.backgroundImage = `url("${sheetUrlFor(actor, runtime.anim.name)}")`;
+  const img = actor.images[runtime.anim.name];
   if (img?.naturalWidth && img?.naturalHeight) {
-    followerEl.style.backgroundSize = `${img.naturalWidth}px ${img.naturalHeight}px`;
+    element.style.backgroundSize = `${img.naturalWidth}px ${img.naturalHeight}px`;
   }
-  followerEl.style.backgroundRepeat = "no-repeat";
-  followerEl.style.imageRendering = "pixelated";
-  followerEl.style.backgroundPosition = `${bpx}px ${bpy}px`;
-
-  const SCALE_VAL = visualScale();
-  followerEl.style.transform =
-    `translate(${Math.round(RUNTIME.pos.x)}px, ${Math.round(RUNTIME.pos.y)}px) ` +
-    `translate(-50%, -50%) ` +
-    `scale(${SCALE_VAL})`;
-  followerEl.style.transformOrigin = "center center";
+  element.style.backgroundRepeat = "no-repeat";
+  element.style.imageRendering = "pixelated";
+  element.style.backgroundPosition = `${-(frame * w)}px ${-(rowIndex * h)}px`;
+  element.style.transform =
+    `translate(${Math.round(runtime.pos.x)}px, ${Math.round(runtime.pos.y)}px) ` +
+    "translate(-50%, -50%) " +
+    `scale(${visualScale()})`;
+  element.style.transformOrigin = "center center";
 }
 
-function pickStateBySpeed() {
-  const now = performance.now();
-  if (RUNTIME.isWandering && RUNTIME.wanderPhase === "sleep") return "sleep";
-  if (RUNTIME.isWandering && RUNTIME.wanderPhase === "idle") return "idle";
-  // If the pack has a 'sleep' state and we've been inactive long enough, sleep.
-  if (hasState("sleep") && !RUNTIME.isWandering && (now - RUNTIME.lastMoveTs) > SLEEP_TIMEOUT_MS) {
-    return "sleep";
-  }
-  // Otherwise mirror the follower's own motion: walking while it's actually
-  // travelling toward its target, idle once it arrives — so the animation
-  // always matches what's happening on screen rather than the cursor's speed.
-  return RUNTIME.isWalking ? "walk" : "idle";
+function pickStateBySpeed(actor, now) {
+  const runtime = actor.runtime;
+  if (runtime.isWandering && runtime.wanderPhase === "sleep") return "sleep";
+  if (runtime.isWandering && runtime.wanderPhase === "idle") return "idle";
+  if (hasState(actor, "sleep") && !runtime.isWandering && now - POINTER.lastMoveTs > SLEEP_TIMEOUT_MS) return "sleep";
+  return runtime.isWalking ? "walk" : "idle";
 }
 
-function tick(dtMs) {
-  // Resolve the current target first so sleep/facing state reflects the active
-  // mode on the same frame that a hybrid follower hands off to wandering.
-  computeTarget(performance.now());
-  const desired = pickStateBySpeed();
-  const nextRow = pickRowForState(desired);
-  if (desired !== RUNTIME.anim.name) {
-    // Queue the switch; wait for current cycle to finish before committing
-    if (!RUNTIME.pendingState || RUNTIME.pendingState.name !== desired) {
-      RUNTIME.pendingState = { name: desired, queuedAt: performance.now() };
+function tickActor(actor, index, dtMs, now) {
+  const runtime = actor.runtime;
+  computeTarget(actor, index, now);
+  const desired = pickStateBySpeed(actor, now);
+  if (desired !== runtime.anim.name) {
+    if (!runtime.pendingState || runtime.pendingState.name !== desired) {
+      runtime.pendingState = { name: desired, queuedAt: now };
     }
-    const st = RUNTIME.meta.states[RUNTIME.anim.name];
-    const atCycleEnd = RUNTIME.anim.frame >= st.frames - 1;
-    const timedOut = (performance.now() - RUNTIME.pendingState.queuedAt) > 300;
+    const currentState = actor.meta.states[runtime.anim.name] || actor.meta.states.idle;
+    const frames = Number(currentState.frames) || 1;
+    const atCycleEnd = runtime.anim.frame >= frames - 1;
+    const timedOut = now - runtime.pendingState.queuedAt > 300;
     if (atCycleEnd || timedOut) {
-      RUNTIME.anim.name = RUNTIME.pendingState.name;
-      RUNTIME.anim.row  = pickRowForState(RUNTIME.anim.name);
-      RUNTIME.pendingState = null;
+      runtime.anim.name = runtime.pendingState.name;
+      runtime.anim.row = pickRowForState(actor, runtime.anim.name);
+      runtime.pendingState = null;
     }
   } else {
-    RUNTIME.pendingState = null;
+    runtime.pendingState = null;
   }
 
-  // Follow and wander both use the same steady-speed movement path. Only the
-  // target source changes, so existing Follow Mode keeps its current feel.
-  const dx = RUNTIME.target.x - RUNTIME.pos.x;
-  const dy = RUNTIME.target.y - RUNTIME.pos.y;
+  const dx = runtime.target.x - runtime.pos.x;
+  const dy = runtime.target.y - runtime.pos.y;
   const dist = Math.hypot(dx, dy);
-
   if (dist > ARRIVE_RADIUS_PX) {
     const baseSpeed = walkSpeedFromConfig();
-    const walkSpeed = RUNTIME.isWandering ? MODE.wanderSpeed(baseSpeed) : baseSpeed;
+    const walkSpeed = runtime.isWandering ? MODE.wanderSpeed(baseSpeed) : baseSpeed;
     const speed = dist < SLOW_RADIUS_PX ? walkSpeed * (dist / SLOW_RADIUS_PX) : walkSpeed;
-    // Clamp the per-frame delta so a long frame gap (e.g. tab was backgrounded)
-    // can't teleport the follower — it just keeps walking once frames resume.
     const moveDtMs = Math.min(dtMs, 50);
     const moveDist = Math.min(dist, speed * (moveDtMs / 1000));
-
-    if (RUNTIME.isWandering) {
-      RUNTIME.moveVel.x = dx / dist;
-      RUNTIME.moveVel.y = dy / dist;
+    if (runtime.isWandering) {
+      runtime.moveVel.x = dx / dist;
+      runtime.moveVel.y = dy / dist;
     }
-    RUNTIME.pos.x += (dx / dist) * moveDist;
-    RUNTIME.pos.y += (dy / dist) * moveDist;
-    RUNTIME.isWalking = true;
+    runtime.pos.x += (dx / dist) * moveDist;
+    runtime.pos.y += (dy / dist) * moveDist;
+    runtime.isWalking = true;
   } else {
-    RUNTIME.isWalking = false;
+    runtime.isWalking = false;
   }
 
-  const st = RUNTIME.meta.states[RUNTIME.anim.name];
-  const msPerFrame = 1000 / st.fps;
-  RUNTIME.anim.accMs += dtMs;
-  while (RUNTIME.anim.accMs >= msPerFrame) {
-    RUNTIME.anim.accMs -= msPerFrame;
-    RUNTIME.anim.frame = (RUNTIME.anim.frame + 1) % st.frames;
+  const state = actor.meta.states[runtime.anim.name] || actor.meta.states.idle;
+  const fps = Number(state.fps) || 8;
+  const frames = Number(state.frames) || 1;
+  const msPerFrame = 1000 / fps;
+  runtime.anim.accMs += dtMs;
+  while (runtime.anim.accMs >= msPerFrame) {
+    runtime.anim.accMs -= msPerFrame;
+    runtime.anim.frame = (runtime.anim.frame + 1) % frames;
   }
-
-  // Keep the row updated continuously for natural facing
-  if (RUNTIME.meta && RUNTIME.meta.states) {
-    RUNTIME.anim.row = pickRowForState(RUNTIME.anim.name);
-  }
-  applyFrame();
+  runtime.anim.row = pickRowForState(actor, runtime.anim.name);
+  applyFrame(actor);
 }
 
-// Cleanly stop everything once the extension context has been invalidated
-// (e.g. the extension was reloaded/updated while this page stayed open).
-// No more chrome.* calls will work here, so just remove our DOM/listeners.
 function teardownInvalidatedContext() {
   window.removeEventListener("mousemove", onMouseMove);
   stopLocalPoll();
-  removeFollower();
+  removeActorElements();
   running = false;
 }
 
@@ -553,7 +522,7 @@ function loop() {
     const now = performance.now();
     const dt = now - last;
     last = now;
-    if (followerEl && RUNTIME.meta) tick(dt);
+    if (ACTORS.length) ACTORS.forEach((actor, index) => tickActor(actor, index, dt, now));
     rafId = requestAnimationFrame(step);
   };
   rafId = requestAnimationFrame(step);
@@ -561,42 +530,136 @@ function loop() {
 
 function onMouseMove(e) {
   const now = performance.now();
+  const dt = Math.max(1, now - (POINTER.lastMouse.t || now));
+  const vx = (e.clientX - POINTER.lastMouse.x) * (1000 / dt);
+  const vy = (e.clientY - POINTER.lastMouse.y) * (1000 / dt);
+  const smooth = 0.2;
+  POINTER.velAvg.x = POINTER.velAvg.x * (1 - smooth) + vx * smooth;
+  POINTER.velAvg.y = POINTER.velAvg.y * (1 - smooth) + vy * smooth;
+  POINTER.speedAvg = Math.hypot(POINTER.velAvg.x, POINTER.velAvg.y);
+  POINTER.lastMouse.x = e.clientX;
+  POINTER.lastMouse.y = e.clientY;
+  POINTER.lastMouse.t = now;
+  POINTER.lastMoveTs = now;
 
-  // update last mouse and velocity estimate
-  const dt = Math.max(1, now - (RUNTIME.lastMouse.t || now)); // ms
-  const vx = (e.clientX - RUNTIME.lastMouse.x) * (1000 / dt); // px/s
-  const vy = (e.clientY - RUNTIME.lastMouse.y) * (1000 / dt); // px/s
-
-  // simple smoothing for direction and speed
-  const SMOOTH = 0.2;
-  RUNTIME.velAvg.x = RUNTIME.velAvg.x * (1 - SMOOTH) + vx * SMOOTH;
-  RUNTIME.velAvg.y = RUNTIME.velAvg.y * (1 - SMOOTH) + vy * SMOOTH;
-  RUNTIME.speedAvg = Math.hypot(RUNTIME.velAvg.x, RUNTIME.velAvg.y);
-
-  RUNTIME.lastMouse.x = e.clientX;
-  RUNTIME.lastMouse.y = e.clientY;
-  RUNTIME.lastMouse.t = now;
-  RUNTIME.lastMoveTs = now;
   if (STATE.enabled && STATE.wander) {
-    resetWanderState();
-    RUNTIME.isWandering = false;
+    ACTORS.forEach((actor) => {
+      resetWanderState(actor);
+      actor.runtime.isWandering = false;
+    });
   }
 }
 
-function start() {
-  if (running) return;
-  running = true;
-  createFollower();
-  RUNTIME.lastMoveTs = performance.now();
-  resetWanderState();
-  // initialize position/target around current mouse (in case no movement yet)
-  const initialX = STATE.enabled ? RUNTIME.lastMouse.x : window.innerWidth / 2;
-  const initialY = STATE.enabled ? RUNTIME.lastMouse.y : window.innerHeight / 2;
-  RUNTIME.pos.x = initialX;
-  RUNTIME.pos.y = initialY;
-  RUNTIME.target.x = initialX;
-  RUNTIME.target.y = initialY;
+function initializeActor(actor, index, previousActor) {
+  const runtime = actor.runtime;
+  if (previousActor?.runtime) {
+    runtime.pos.x = previousActor.runtime.pos.x;
+    runtime.pos.y = previousActor.runtime.pos.y;
+    runtime.target.x = previousActor.runtime.target.x;
+    runtime.target.y = previousActor.runtime.target.y;
+    runtime.offsetDir.x = previousActor.runtime.offsetDir.x;
+    runtime.offsetDir.y = previousActor.runtime.offsetDir.y;
+  } else {
+    const initialX = STATE.enabled ? POINTER.lastMouse.x : window.innerWidth / 2;
+    const initialY = STATE.enabled ? POINTER.lastMouse.y : window.innerHeight / 2;
+    runtime.pos.x = initialX - index * CONFIG.offset;
+    runtime.pos.y = initialY;
+    runtime.target.x = runtime.pos.x;
+    runtime.target.y = runtime.pos.y;
+  }
+  resetWanderState(actor);
+}
 
+function replaceActors(nextActors) {
+  const previousActors = ACTORS.slice();
+  removeActorElements();
+  ACTORS.length = 0;
+  nextActors.forEach((actor, index) => {
+    initializeActor(actor, index, previousActors[index]);
+    ACTORS.push(actor);
+    if (running) createFollower(actor, index);
+  });
+}
+
+function normalizeStoredRoster(rawRoster, fallbackPack) {
+  const fallback = typeof fallbackPack === "string" && fallbackPack.trim() ? fallbackPack : DEFAULT_PACK;
+  const entries = Array.isArray(rawRoster)
+    ? rawRoster.filter((value) => typeof value === "string" && value.trim()).slice(0, 6)
+    : [];
+  return entries.length ? entries : [fallback];
+}
+
+function activePackKeys() {
+  if (STATE.rosterMode === "individual") return [STATE.pack || STATE.packs[0] || DEFAULT_PACK];
+  return STATE.packs.length ? STATE.packs : [STATE.pack || DEFAULT_PACK];
+}
+
+async function loadActor(packKey) {
+  const actor = {
+    packKey,
+    meta: null,
+    images: {},
+    element: null,
+    runtime: createFollowerRuntime()
+  };
+  let chosen = null;
+  let meta = null;
+  let lastError = null;
+
+  for (const candidate of buildPackCandidates(packKey)) {
+    try {
+      meta = await fetchPackMeta(candidate);
+      chosen = candidate;
+      break;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  if (!chosen || !meta) throw lastError || new Error(`Unable to load pack for key "${packKey}"`);
+
+  actor.packKey = chosen;
+  actor.meta = meta;
+  resetAnimationForNewPack(actor);
+  await ensureImagesLoaded(actor);
+  if (chosen !== packKey && packKey === STATE.pack) {
+    STATE.pack = chosen;
+    try { chrome.storage.sync.set({ vcp1_pack: chosen }); } catch (_) {}
+  }
+  return actor;
+}
+
+async function rebuildActors() {
+  const token = ++rebuildToken;
+  const keys = activePackKeys();
+  const loaded = (await Promise.all(keys.map(async (key) => {
+    try {
+      return await loadActor(key);
+    } catch (error) {
+      console.warn(`pack load failed for ${key}`, error);
+      return null;
+    }
+  }))).filter(Boolean);
+
+  if (token !== rebuildToken) return;
+  if (!loaded.length && !ACTORS.length) {
+    try {
+      loaded.push(await loadActor(DEFAULT_PACK));
+    } catch (error) {
+      console.warn("default pack also failed", error);
+    }
+  }
+  if (!loaded.length) return;
+  replaceActors(loaded);
+}
+
+function start() {
+  if (running || !ACTORS.length) return;
+  running = true;
+  ACTORS.forEach((actor, index) => {
+    initializeActor(actor, index);
+    createFollower(actor, index);
+  });
+  POINTER.lastMoveTs = performance.now();
   window.addEventListener("mousemove", onMouseMove, { passive: true });
   loop();
 }
@@ -605,71 +668,31 @@ function stop() {
   if (!running) return;
   running = false;
   window.removeEventListener("mousemove", onMouseMove);
-  removeFollower();
-}
-
-async function loadPack(packKey) {
-  const candidates = buildPackCandidates(packKey);
-  let chosen = null;
-  let meta = null;
-  let lastError = null;
-
-  for (const candidate of candidates) {
-    try {
-      meta = await fetchPackMeta(candidate);
-      chosen = candidate;
-      break;
-    } catch (err) {
-      lastError = err;
-    }
-  }
-
-  if (!chosen || !meta) {
-    throw lastError || new Error(`Unable to load pack for key "${packKey}"`);
-  }
-
-  const migrated = chosen !== packKey;
-  if (migrated) {
-    try { chrome.storage.sync.set({ vcp1_pack: chosen }); } catch (_) {}
-  }
-  STATE.pack = chosen;
-  RUNTIME.meta = meta;
-  // reset animation state for the new pack
-  resetAnimationForNewPack();
-  await ensureImagesLoaded(meta);
-  // Restart animation loop if switching packs while active
-  if (followerEl) removeFollower();
-  if (running) {
-    createFollower();
-    loop();
-  }
+  removeActorElements();
+  if (rafId) cancelAnimationFrame(rafId);
+  rafId = null;
 }
 
 function applyState() {
-  if (MODE.isActive(STATE.enabled, STATE.wander)) start(); else stop();
+  if (MODE.isActive(STATE.enabled, STATE.wander)) start();
+  else stop();
 }
 
 // boot
 chrome.storage.sync.get(
-  ["vcp1_enabled", "vcp1_wander", "vcp1_pack", "vcp1_scale", "vcp1_scale_version", "vcp1_offset", "vcp1_lerp"],
+  ["vcp1_enabled", "vcp1_wander", "vcp1_pack", "vcp1_packs", "vcp1_roster_mode", "vcp1_scale", "vcp1_scale_version", "vcp1_offset", "vcp1_lerp"],
   async (res) => {
     STATE.enabled = !!res.vcp1_enabled;
-    STATE.wander  = !!res.vcp1_wander;
-    STATE.pack    = res.vcp1_pack || DEFAULT_PACK;
+    STATE.wander = !!res.vcp1_wander;
+    STATE.pack = res.vcp1_pack || DEFAULT_PACK;
+    STATE.packs = normalizeStoredRoster(res.vcp1_packs, STATE.pack);
+    STATE.rosterMode = res.vcp1_roster_mode === "multiple" ? "multiple" : "individual";
     const scale = normalizeStoredScale(res.vcp1_scale, res.vcp1_scale_version);
     applyConfigPatch({ ...res, vcp1_scale: scale });
     if (res.vcp1_scale_version !== SCALE_VERSION) {
-      try {
-        chrome.storage.sync.set({ vcp1_scale: scale, vcp1_scale_version: SCALE_VERSION });
-      } catch (_) {}
+      try { chrome.storage.sync.set({ vcp1_scale: scale, vcp1_scale_version: SCALE_VERSION }); } catch (_) {}
     }
-    try {
-      await loadPack(STATE.pack);
-    } catch (e) {
-      console.warn("pack load failed; reverting to default", e);
-      STATE.pack = DEFAULT_PACK;
-      try { await loadPack(STATE.pack); } catch (e2) { console.warn("default pack also failed", e2); }
-    }
+    await rebuildActors();
     applyState();
   }
 );
@@ -677,51 +700,45 @@ chrome.storage.sync.get(
 // react to popup changes
 chrome.storage.onChanged.addListener(async (changes, area) => {
   if (area !== "sync") return;
+
   if (changes.vcp1_enabled) {
     STATE.enabled = !!changes.vcp1_enabled.newValue;
-    if (STATE.enabled && STATE.wander) RUNTIME.lastMoveTs = performance.now();
+    if (STATE.enabled && STATE.wander) POINTER.lastMoveTs = performance.now();
     applyState();
   }
   if (changes.vcp1_wander) {
     STATE.wander = !!changes.vcp1_wander.newValue;
-    if (STATE.enabled && STATE.wander) RUNTIME.lastMoveTs = performance.now();
+    if (STATE.enabled && STATE.wander) POINTER.lastMoveTs = performance.now();
     applyState();
   }
-  if (changes.vcp1_pack) {
-    const prev = STATE.pack;
-    STATE.pack = changes.vcp1_pack.newValue || DEFAULT_PACK;
-    try {
-      await loadPack(STATE.pack);
-      // If follower exists, immediately apply a frame from the new sheet
-      if (followerEl) applyFrame();
-    } catch (e) {
-      console.warn("pack switch failed; restoring previous pack", e);
-      STATE.pack = prev;
-      try { await loadPack(STATE.pack); } catch (e2) { console.warn("restore previous pack failed", e2); }
-      if (followerEl) applyFrame();
+
+  if (changes.vcp1_packs || changes.vcp1_pack || changes.vcp1_roster_mode) {
+    if (changes.vcp1_pack) STATE.pack = changes.vcp1_pack.newValue || DEFAULT_PACK;
+    if (changes.vcp1_packs) STATE.packs = normalizeStoredRoster(changes.vcp1_packs.newValue, STATE.pack);
+    if (changes.vcp1_roster_mode) {
+      STATE.rosterMode = changes.vcp1_roster_mode.newValue === "multiple" ? "multiple" : "individual";
     }
+    await rebuildActors();
+    applyState();
   }
+
   if (changes.vcp1_scale || changes.vcp1_offset || changes.vcp1_lerp) {
-    const patch = {
-      vcp1_scale:  changes.vcp1_scale  ? Number(changes.vcp1_scale.newValue)  : undefined,
+    applyConfigPatch({
+      vcp1_scale: changes.vcp1_scale ? Number(changes.vcp1_scale.newValue) : undefined,
       vcp1_offset: changes.vcp1_offset ? Number(changes.vcp1_offset.newValue) : undefined,
-      vcp1_lerp:   changes.vcp1_lerp   ? Number(changes.vcp1_lerp.newValue)   : undefined,
-    };
-    applyConfigPatch(patch);
-    // no restart needed; next frame uses updated CONFIG
+      vcp1_lerp: changes.vcp1_lerp ? Number(changes.vcp1_lerp.newValue) : undefined
+    });
   }
 });
 
 // listen for live slider updates and drag state from popup.js
 chrome.runtime.onMessage.addListener((msg) => {
   if (!msg) return;
-
   if (msg.type === "vcp1_config" && msg.patch) {
     applyConfigPatch(msg.patch);
-    if (followerEl && RUNTIME.meta) applyFrame();
+    applyFrames();
     return;
   }
-
   if (msg.type === "vcp1_drag") {
     const on = !!msg.dragging;
     if (on && !LIVE.dragging) {
@@ -734,4 +751,7 @@ chrome.runtime.onMessage.addListener((msg) => {
   }
 });
 
-window.addEventListener("beforeunload", () => { stopLocalPoll(); stop(); });
+window.addEventListener("beforeunload", () => {
+  stopLocalPoll();
+  stop();
+});
