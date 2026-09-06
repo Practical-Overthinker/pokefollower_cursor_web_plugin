@@ -83,14 +83,84 @@
     /* Header row: brand left, mode toggles right */
     .header {
       position: relative;
-      height: 40px;
+      height: 58px;
       display: grid; grid-template-columns: 1fr auto; align-items: start;
       margin-top: -25px;         /* visually closer to black line */
       padding: 0 14px;           /* spacing from edges */
       background: transparent; border: 0;
     }
+    .brand-block {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+      min-width: 0;
+    }
     .brand { 
       font-weight: 600; font-style: normal; font-size: 12px; letter-spacing: .05em;
+    }
+    .roster-slots {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      height: 24px;
+    }
+    .slot-item {
+      position: relative;
+      width: 24px;
+      height: 24px;
+      flex: 0 0 24px;
+    }
+    .slot-select {
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      border: 0;
+      border-radius: 50%;
+      background: transparent;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+    }
+    .slot-select img {
+      display: block;
+      width: 24px;
+      height: 24px;
+      image-rendering: pixelated;
+    }
+    .slot-select.empty {
+      border: 2px solid #000;
+      background: #000;
+    }
+    .slot-select.empty:disabled {
+      cursor: default;
+      opacity: 0.75;
+    }
+    .slot-select[aria-selected="true"] {
+      outline: 2px solid #EF4036;
+      outline-offset: 1px;
+    }
+    .slot-select:focus-visible,
+    .slot-remove:focus-visible {
+      outline: 2px solid #000;
+      outline-offset: 2px;
+    }
+    .slot-remove {
+      position: absolute;
+      top: -6px;
+      right: -5px;
+      z-index: 2;
+      width: 11px;
+      height: 11px;
+      padding: 0;
+      display: grid;
+      place-items: center;
+      border: 1px solid #000;
+      border-radius: 50%;
+      background: #ef4036;
+      color: #000;
+      font: 800 9px/1 system-ui, sans-serif;
+      cursor: pointer;
     }
     .mode-toggles {
       display: inline-flex;
@@ -341,7 +411,10 @@
 
   <!-- Header -->
   <div class="header">
-    <div class="brand">PokeFollower v4.0</div>
+    <div class="brand-block">
+      <div class="brand">PokeFollower v4.0</div>
+      <div id="rosterSlots" class="roster-slots" role="group" aria-label="Pokémon slots"></div>
+    </div>
     <div class="mode-toggles" role="group" aria-label="Follower modes">
       <label class="mode-toggle" for="enabled">
         <span>Follow Mode</span>
@@ -475,6 +548,6 @@
   </div>
 
   <script type="module" src="page-check.js"></script>
-  <script src="popup.js"></script>
+  <script type="module" src="popup.js"></script>
 </body>
 </html>
