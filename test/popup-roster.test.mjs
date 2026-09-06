@@ -75,6 +75,9 @@ test("popup markup provides the slot strip and remove affordance contract", () =
   assert.match(html, /class="roster-mode-icon"/);
   assert.match(html, /class="roster-mode-label"/);
   assert.match(html, /class="roster-mode-option"/);
+  assert.ok(
+    html.indexOf('<span class="roster-mode-label"') < html.indexOf('<span class="roster-mode-icon"')
+  );
   assert.match(html, /\.roster-mode\s*\{[^}]*margin-top:\s*2px/s);
   assert.match(html, /<script type="module" src="popup\.js"><\/script>/);
   assert.match(html, /\.slot-remove\s*\{[^}]*position:\s*absolute/s);
