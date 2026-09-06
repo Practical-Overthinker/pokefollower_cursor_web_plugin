@@ -173,3 +173,25 @@ test("content runtime reads the roster and keeps Individual mode single-actor", 
   assert.match(source, /function activePackKeys/);
   assert.match(source, /rosterMode === "individual"/);
 });
+
+test("Multiple Follow derives ordered trailing targets from prior actors", () => {
+  const source = fs.readFileSync(new URL("../src/content.js", import.meta.url), "utf8");
+  assert.match(source, /STATE\.rosterMode === "multiple" && index > 0/);
+  assert.match(source, /const previous = ACTORS\[index - 1\]\.runtime/);
+  assert.match(source, /MODE\.getTrailingTarget/);
+  assert.match(source, /spacing:\s*CONFIG\.offset/);
+  assert.match(source, /ACTORS\.length\s*=\s*0/);
+
+  const first = mode.getTrailingTarget({
+    previousPosition: { x: 100, y: 100 },
+    previousTarget: { x: 200, y: 100 },
+    spacing: 30
+  });
+  const second = mode.getTrailingTarget({
+    previousPosition: first,
+    previousTarget: { x: first.x + 100, y: first.y },
+    spacing: 30
+  });
+  assert.equal(first.x, 70);
+  assert.equal(second.x, 40);
+});

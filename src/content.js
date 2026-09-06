@@ -262,7 +262,19 @@ function computeTarget(actor, index, now) {
   }
 
   resetWanderState(actor);
-  computeFollowTarget(actor);
+  if (STATE.rosterMode === "multiple" && index > 0 && ACTORS[index - 1]) {
+    const previous = ACTORS[index - 1].runtime;
+    const target = MODE.getTrailingTarget({
+      previousPosition: previous.pos,
+      previousTarget: previous.target,
+      spacing: CONFIG.offset,
+      fallbackDirection: POINTER.velAvg
+    });
+    runtime.target.x = target.x;
+    runtime.target.y = target.y;
+  } else {
+    computeFollowTarget(actor);
+  }
 }
 
 // --- 8-way facing from a direction vector (octants) ---
