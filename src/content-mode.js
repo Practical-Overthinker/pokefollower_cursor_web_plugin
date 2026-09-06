@@ -89,7 +89,7 @@
     const dy = b.y - a.y;
     const length = Math.hypot(dx, dy);
 
-    if (distance <= 0 || length >= distance) return { first: a, second: b };
+    if (distance <= 0 || length >= distance) return { first: a, second: b, changed: false };
 
     const nx = length > 0.0001 ? dx / length : 1;
     const ny = length > 0.0001 ? dy / length : 0;
@@ -97,7 +97,8 @@
 
     return {
       first: { x: a.x - nx * correction, y: a.y - ny * correction },
-      second: { x: b.x + nx * correction, y: b.y + ny * correction }
+      second: { x: b.x + nx * correction, y: b.y + ny * correction },
+      changed: true
     };
   }
 

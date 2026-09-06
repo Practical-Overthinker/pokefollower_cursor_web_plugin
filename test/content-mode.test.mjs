@@ -103,6 +103,7 @@ test("wandering positions keep the configured minimum center distance", () => {
     ),
     30
   );
+  assert.equal(separated.changed, true);
 });
 
 test("wander targets stay inside the scaled viewport-safe bounds", () => {
@@ -246,6 +247,7 @@ test("Multiple Wander keeps per-actor phases and resets them for hybrid rejoin",
   assert.match(source, /runtime\.wanderPhase/);
   assert.match(source, /runtime\.isWandering = STATE\.wander && !following/);
   assert.match(source, /if \(!following\) \{\s*computeWanderTarget\(actor, now\)/s);
+  assert.match(source, /if \(separated\.changed\) \{[\s\S]*runtime\.wanderTarget = null/s);
   assert.match(source, /ACTORS\.forEach\(\(actor\) => \{\s*resetWanderState\(actor\)/s);
   assert.match(source, /function removeActorElements/);
   assert.match(source, /if \(MODE\.isActive\(STATE\.enabled, STATE\.wander\)\) start\(\);/);

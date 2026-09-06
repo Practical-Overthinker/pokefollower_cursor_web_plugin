@@ -313,6 +313,14 @@ function enforceWanderSeparation() {
         });
         firstActor.runtime.pos = separated.first;
         secondActor.runtime.pos = separated.second;
+        if (separated.changed) {
+          [firstActor, secondActor].forEach((blockedActor) => {
+            if (!blockedActor.runtime.isWalking) return;
+            blockedActor.runtime.wanderTarget = null;
+            blockedActor.runtime.wanderPhase = "roam";
+            blockedActor.runtime.wanderIdleUntil = 0;
+          });
+        }
       }
     }
   }
