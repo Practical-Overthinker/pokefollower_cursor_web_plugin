@@ -20,6 +20,54 @@
     return now - lastMoveTs < finite(idleDelayMs, IDLE_DELAY_MS);
   }
 
+  function isIndependentWander({
+    rosterMode,
+    followMode,
+    wanderMode,
+    lastMoveTs,
+    now,
+    idleDelayMs = IDLE_DELAY_MS
+  }) {
+    if (rosterMode !== "multiple" || !wanderMode) return false;
+    return !shouldFollow({ followMode, wanderMode, lastMoveTs, now, idleDelayMs });
+  }
+
+  function getTrailingTarget({
+    previousPosition,
+    previousTarget,
+    spacing,
+    fallbackDirection = { x: 1, y: 0 }
+  }) {
+    const position = {
+      x: finite(previousPosition?.x),
+      y: finite(previousPosition?.y)
+    };
+    let direction = {
+      x: finite(previousTarget?.x) - position.x,
+      y: finite(previousTarget?.y) - position.y
+    };
+    let length = Math.hypot(direction.x, direction.y);
+
+    if (length <= 0.0001) {
+      direction = {
+        x: finite(fallbackDirection?.x),
+        y: finite(fallbackDirection?.y)
+      };
+      length = Math.hypot(direction.x, direction.y);
+    }
+
+    if (length <= 0.0001) {
+      direction = { x: 1, y: 0 };
+      length = 1;
+    }
+
+    const distance = Math.max(0, finite(spacing));
+    return {
+      x: position.x - (direction.x / length) * distance,
+      y: position.y - (direction.y / length) * distance
+    };
+  }
+
   function getWanderBounds({
     viewportWidth,
     viewportHeight,
@@ -113,6 +161,8 @@
     IDLE_DELAY_MS,
     isActive,
     shouldFollow,
+    isIndependentWander,
+    getTrailingTarget,
     getWanderBounds,
     isWithinBounds,
     pickWanderTarget,

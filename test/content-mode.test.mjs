@@ -29,6 +29,40 @@ test("hybrid mode follows briefly, then wanders after pointer idle", () => {
   assert.equal(mode.shouldFollow({ followMode: true, wanderMode: true, lastMoveTs: 1000, now: 4000 }), false);
 });
 
+test("only Multiple hybrid mode enters independent wander after pointer idle", () => {
+  const active = {
+    rosterMode: "multiple",
+    followMode: true,
+    wanderMode: true,
+    lastMoveTs: 1000,
+    now: 3999
+  };
+  assert.equal(mode.isIndependentWander(active), false);
+  assert.equal(mode.isIndependentWander({ ...active, now: 4000 }), true);
+  assert.equal(mode.isIndependentWander({ ...active, rosterMode: "individual", now: 4000 }), false);
+  assert.equal(mode.isIndependentWander({ ...active, followMode: false, now: 4000 }), true);
+});
+
+test("trailing targets use movement direction and spacing", () => {
+  const moving = mode.getTrailingTarget({
+    previousPosition: { x: 100, y: 100 },
+    previousTarget: { x: 200, y: 100 },
+    spacing: 30,
+    fallbackDirection: { x: 0, y: 1 }
+  });
+  assert.equal(moving.x, 70);
+  assert.equal(moving.y, 100);
+
+  const stationary = mode.getTrailingTarget({
+    previousPosition: { x: 100, y: 100 },
+    previousTarget: { x: 100, y: 100 },
+    spacing: 30,
+    fallbackDirection: { x: 0, y: 1 }
+  });
+  assert.equal(stationary.x, 100);
+  assert.equal(stationary.y, 70);
+});
+
 test("wander targets stay inside the scaled viewport-safe bounds", () => {
   const bounds = mode.getWanderBounds({
     viewportWidth: 800,
