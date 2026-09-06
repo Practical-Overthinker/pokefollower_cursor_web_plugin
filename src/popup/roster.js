@@ -1,5 +1,13 @@
 export const MAX_ROSTER_SIZE = 6;
 
+export function normalizeRosterMode(value) {
+  return value === "multiple" ? "multiple" : "individual";
+}
+
+export function toggleRosterMode(value) {
+  return normalizeRosterMode(value) === "multiple" ? "individual" : "multiple";
+}
+
 function isPackId(value) {
   return typeof value === "string" && value.trim().length > 0;
 }

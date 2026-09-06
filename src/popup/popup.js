@@ -2,10 +2,12 @@ import {
   MAX_ROSTER_SIZE,
   addRosterSlot,
   normalizeRoster,
+  normalizeRosterMode,
   removeRosterSlot,
   selectedIndexAfterRemoval,
   selectedRosterIndex,
-  setRosterPack
+  setRosterPack,
+  toggleRosterMode
 } from "./roster.js";
 
 const DEFAULT_PACK = "retro/gen-1/001-bulbasaur";
@@ -15,6 +17,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const wanderEl  = document.getElementById("wander");
   const packEl    = document.getElementById("pack");
   const rosterSlotsEl = document.getElementById("rosterSlots");
+  const rosterModeButton = document.getElementById("rosterModeButton");
   const pickerEl  = document.querySelector(".picker");
   const searchBtn = pickerEl ? pickerEl.querySelector(".glass") : null;
   const searchEl  = document.getElementById("packSearch");
@@ -25,6 +28,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const blockedOk = document.getElementById("blockedPageOk");
   let roster = [DEFAULT_PACK];
   let selectedSlot = 0;
+  let rosterMode = "individual";
 
   // Helper: save but do NOT auto-close (except when toggling enable)
   const save = (obj) => chrome.storage.sync.set(obj);
@@ -89,6 +93,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function persistRoster() {
     save({ vcp1_packs: roster, vcp1_pack: currentRosterPack() });
+  }
+
+  function renderRosterMode() {
+    if (!rosterModeButton) return;
+    const label = rosterMode === "multiple" ? "Multiple" : "Individual";
+    rosterModeButton.textContent = label;
+    rosterModeButton.setAttribute("aria-label", `Roster mode: ${label}`);
+    rosterModeButton.setAttribute("aria-pressed", String(rosterMode === "multiple"));
   }
 
   function showRosterPack(pack) {
@@ -306,10 +318,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Load saved settings
   chrome.storage.sync.get(
-    ["vcp1_enabled", "vcp1_wander", "vcp1_pack", "vcp1_packs", "vcp1_scale", "vcp1_scale_version", "vcp1_offset", "vcp1_lerp"],
+    ["vcp1_enabled", "vcp1_wander", "vcp1_pack", "vcp1_packs", "vcp1_roster_mode", "vcp1_scale", "vcp1_scale_version", "vcp1_offset", "vcp1_lerp"],
     (res) => {
       enabledEl.checked = !!res.vcp1_enabled;
       wanderEl.checked = !!res.vcp1_wander;
+      rosterMode = normalizeRosterMode(res.vcp1_roster_mode);
+      renderRosterMode();
       const hadRoster = Array.isArray(res.vcp1_packs) && res.vcp1_packs.length > 0;
       const activePack = res.vcp1_pack || DEFAULT_PACK;
       roster = normalizeRoster(res.vcp1_packs, activePack);
@@ -361,6 +375,12 @@ document.addEventListener("DOMContentLoaded", () => {
   wanderEl.addEventListener("change", () => {
     save({ vcp1_wander: wanderEl.checked });
     window.close();
+  });
+
+  rosterModeButton?.addEventListener("click", () => {
+    rosterMode = toggleRosterMode(rosterMode);
+    renderRosterMode();
+    save({ vcp1_roster_mode: rosterMode });
   });
 
   // Pack select — save but keep popup open, and update preview

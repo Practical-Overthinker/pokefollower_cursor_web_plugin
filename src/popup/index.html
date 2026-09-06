@@ -105,6 +105,22 @@
       gap: 3px;
       height: 24px;
     }
+    .roster-mode {
+      width: 72px;
+      min-height: 20px;
+      padding: 1px 5px;
+      border: 1px solid #000;
+      border-radius: 4px;
+      background: #fff;
+      color: #000;
+      font: 700 10px/1.2 system-ui, sans-serif;
+      text-align: left;
+      cursor: pointer;
+    }
+    .roster-mode:focus-visible {
+      outline: 2px solid #000;
+      outline-offset: 2px;
+    }
     .slot-item {
       position: relative;
       width: 24px;
@@ -414,6 +430,7 @@
     <div class="brand-block">
       <div class="brand">PokeFollower v4.0</div>
       <div id="rosterSlots" class="roster-slots" role="group" aria-label="Pokémon slots"></div>
+      <button id="rosterModeButton" class="roster-mode" type="button" aria-pressed="false" aria-label="Roster mode: Individual">Individual</button>
     </div>
     <div class="mode-toggles" role="group" aria-label="Follower modes">
       <label class="mode-toggle" for="enabled">
