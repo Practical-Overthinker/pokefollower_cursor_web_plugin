@@ -1,9 +1,11 @@
 // === VCP1 content script: load pack JSON + animate idle/walk with left/right flip ===
 const DEFAULT_PACK = "retro/gen-1/009-blastoise";
 const GENERATION_DIRS = ["gen-1","gen-2","gen-3","gen-4","gen-5","gen-6","gen-7","gen-8","gen-9"];
+const MODE = globalThis.__vcp1Mode;
 
 const STATE = {
   enabled: false,
+  wander: false,
   pack: DEFAULT_PACK,  // default
   facingLeft: false
 };
@@ -18,6 +20,10 @@ const RUNTIME = {
   anim: { name: "idle", frame: 0, row: 0, accMs: 0 },
   lastMoveTs: 0,
   lastMouse: { x: 0, y: 0, t: 0 },
+  wanderTarget: null,
+  wanderPauseUntil: 0,
+  isWandering: false,
+  moveVel: { x: 0, y: 0 },
 
   // position/target and smoothed velocity
   pos:       { x: 0, y: 0 },
@@ -33,6 +39,9 @@ const RUNTIME = {
 const SLEEP_TIMEOUT_MS = 30000; // 30s of no movement -> sleep
 const ARRIVE_RADIUS_PX = 6;     // close enough to target to call it "arrived" and settle into idle
 const SLOW_RADIUS_PX   = 60;    // ease walking speed down within this distance for a soft landing
+const WANDER_PAUSE_MIN_MS = 500;
+const WANDER_PAUSE_MAX_MS = 1000;
+const WANDER_EDGE_MARGIN_PX = 12;
 
 function hasState(name) {
   return !!(RUNTIME.meta && RUNTIME.meta.states && RUNTIME.meta.states[name]);
@@ -90,7 +99,7 @@ function stopLocalPoll() {
   }
 }
 // --- follow targeting: trail the cursor when moving; perch above when idle
-function computeTarget() {
+function computeFollowTarget() {
   const speed = RUNTIME.speedAvg || 0;
   const hasDir = speed > 40;
   const OFFSET = CONFIG.offset;
@@ -112,6 +121,71 @@ function computeTarget() {
 
   RUNTIME.target.x = (RUNTIME.lastMouse?.x || 0) + RUNTIME.offsetDir.x * OFFSET;
   RUNTIME.target.y = (RUNTIME.lastMouse?.y || 0) + RUNTIME.offsetDir.y * OFFSET;
+}
+
+function resetWanderState() {
+  RUNTIME.wanderTarget = null;
+  RUNTIME.wanderPauseUntil = 0;
+}
+
+function currentWanderBounds() {
+  const frame = RUNTIME.meta?.states?.idle?.frame || RUNTIME.meta?.states?.walk?.frame || { w: 40, h: 40 };
+  return MODE.getWanderBounds({
+    viewportWidth: window.innerWidth,
+    viewportHeight: window.innerHeight,
+    spriteWidth: frame.w,
+    spriteHeight: frame.h,
+    scale: CONFIG.scale,
+    edgeMargin: WANDER_EDGE_MARGIN_PX
+  });
+}
+
+function chooseWanderTarget(bounds = currentWanderBounds()) {
+  RUNTIME.wanderTarget = MODE.pickWanderTarget(bounds, RUNTIME.wanderTarget);
+  return RUNTIME.wanderTarget;
+}
+
+function randomWanderPause() {
+  return WANDER_PAUSE_MIN_MS + Math.random() * (WANDER_PAUSE_MAX_MS - WANDER_PAUSE_MIN_MS);
+}
+
+function computeWanderTarget(now) {
+  const bounds = currentWanderBounds();
+  if (RUNTIME.wanderTarget && !MODE.isWithinBounds(RUNTIME.wanderTarget, bounds)) {
+    RUNTIME.wanderTarget = null;
+    RUNTIME.wanderPauseUntil = 0;
+  }
+
+  if (!RUNTIME.wanderTarget) chooseWanderTarget(bounds);
+
+  const dx = RUNTIME.wanderTarget.x - RUNTIME.pos.x;
+  const dy = RUNTIME.wanderTarget.y - RUNTIME.pos.y;
+  if (Math.hypot(dx, dy) <= ARRIVE_RADIUS_PX) {
+    if (!RUNTIME.wanderPauseUntil) RUNTIME.wanderPauseUntil = now + randomWanderPause();
+    if (now >= RUNTIME.wanderPauseUntil) {
+      RUNTIME.wanderPauseUntil = 0;
+      chooseWanderTarget(bounds);
+    }
+  }
+
+  RUNTIME.target.x = RUNTIME.wanderTarget.x;
+  RUNTIME.target.y = RUNTIME.wanderTarget.y;
+}
+
+function computeTarget(now) {
+  const following = MODE.shouldFollow({
+    followMode: STATE.enabled,
+    wanderMode: STATE.wander,
+    lastMoveTs: RUNTIME.lastMoveTs,
+    now
+  });
+  RUNTIME.isWandering = STATE.wander && !following;
+  if (following) {
+    resetWanderState();
+    computeFollowTarget();
+  } else {
+    computeWanderTarget(now);
+  }
 }
 
 // --- 8-way facing from a direction vector (octants) ---
@@ -146,7 +220,8 @@ function pickRowForState(stateName) {
   // Face based on the cursor's own direction of travel — the follower's path
   // can lag/curve while it catches up, but it should still visibly look like
   // it's heading toward (or alongside) the cursor, not its own catch-up route.
-  const dir8 = pickDir8FromVector(RUNTIME.velAvg.x, RUNTIME.velAvg.y);
+  const direction = RUNTIME.isWandering ? RUNTIME.moveVel : RUNTIME.velAvg;
+  const dir8 = pickDir8FromVector(direction.x, direction.y);
   if (dir8 in rows) return rows[dir8];
 
   // Map diagonal to nearest cardinal if diagonal key missing
@@ -321,7 +396,7 @@ function applyFrame() {
 function pickStateBySpeed() {
   const now = performance.now();
   // If the pack has a 'sleep' state and we've been inactive long enough, sleep.
-  if (hasState("sleep") && (now - RUNTIME.lastMoveTs) > SLEEP_TIMEOUT_MS) {
+  if (hasState("sleep") && !RUNTIME.isWandering && (now - RUNTIME.lastMoveTs) > SLEEP_TIMEOUT_MS) {
     return "sleep";
   }
   // Otherwise mirror the follower's own motion: walking while it's actually
@@ -331,6 +406,9 @@ function pickStateBySpeed() {
 }
 
 function tick(dtMs) {
+  // Resolve the current target first so sleep/facing state reflects the active
+  // mode on the same frame that a hybrid follower hands off to wandering.
+  computeTarget(performance.now());
   const desired = pickStateBySpeed();
   const nextRow = pickRowForState(desired);
   if (desired !== RUNTIME.anim.name) {
@@ -350,11 +428,8 @@ function tick(dtMs) {
     RUNTIME.pendingState = null;
   }
 
-  // follow feel: walk toward the target at a steady pace, like it's actually
-  // travelling there on its own — not eased/snapped toward a moving point on a
-  // leash. Direction is recomputed every frame, so it turns naturally as the
-  // target (cursor) moves, and eases to a stop on arrival instead of overshooting.
-  computeTarget();
+  // Follow and wander both use the same steady-speed movement path. Only the
+  // target source changes, so existing Follow Mode keeps its current feel.
   const dx = RUNTIME.target.x - RUNTIME.pos.x;
   const dy = RUNTIME.target.y - RUNTIME.pos.y;
   const dist = Math.hypot(dx, dy);
@@ -367,11 +442,19 @@ function tick(dtMs) {
     const moveDtMs = Math.min(dtMs, 50);
     const moveDist = Math.min(dist, speed * (moveDtMs / 1000));
 
+    if (RUNTIME.isWandering) {
+      RUNTIME.moveVel.x = dx / dist;
+      RUNTIME.moveVel.y = dy / dist;
+    }
     RUNTIME.pos.x += (dx / dist) * moveDist;
     RUNTIME.pos.y += (dy / dist) * moveDist;
     RUNTIME.isWalking = true;
   } else {
     RUNTIME.isWalking = false;
+    if (RUNTIME.isWandering) {
+      RUNTIME.moveVel.x = 0;
+      RUNTIME.moveVel.y = 0;
+    }
   }
 
   const st = RUNTIME.meta.states[RUNTIME.anim.name];
@@ -433,6 +516,11 @@ function onMouseMove(e) {
   RUNTIME.lastMouse.y = e.clientY;
   RUNTIME.lastMouse.t = now;
   RUNTIME.lastMoveTs = now;
+  if (STATE.enabled && STATE.wander) {
+    RUNTIME.wanderTarget = null;
+    RUNTIME.wanderPauseUntil = 0;
+    RUNTIME.isWandering = false;
+  }
 }
 
 function start() {
@@ -440,11 +528,14 @@ function start() {
   running = true;
   createFollower();
   RUNTIME.lastMoveTs = performance.now();
+  resetWanderState();
   // initialize position/target around current mouse (in case no movement yet)
-  RUNTIME.pos.x = RUNTIME.lastMouse.x;
-  RUNTIME.pos.y = RUNTIME.lastMouse.y;
-  RUNTIME.target.x = RUNTIME.lastMouse.x;
-  RUNTIME.target.y = RUNTIME.lastMouse.y;
+  const initialX = STATE.enabled ? RUNTIME.lastMouse.x : window.innerWidth / 2;
+  const initialY = STATE.enabled ? RUNTIME.lastMouse.y : window.innerHeight / 2;
+  RUNTIME.pos.x = initialX;
+  RUNTIME.pos.y = initialY;
+  RUNTIME.target.x = initialX;
+  RUNTIME.target.y = initialY;
 
   window.addEventListener("mousemove", onMouseMove, { passive: true });
   loop();
@@ -495,14 +586,15 @@ async function loadPack(packKey) {
 }
 
 function applyState() {
-  if (STATE.enabled) start(); else stop();
+  if (MODE.isActive(STATE.enabled, STATE.wander)) start(); else stop();
 }
 
 // boot
 chrome.storage.sync.get(
-  ["vcp1_enabled", "vcp1_pack", "vcp1_scale", "vcp1_offset", "vcp1_lerp"],
+  ["vcp1_enabled", "vcp1_wander", "vcp1_pack", "vcp1_scale", "vcp1_offset", "vcp1_lerp"],
   async (res) => {
     STATE.enabled = !!res.vcp1_enabled;
+    STATE.wander  = !!res.vcp1_wander;
     STATE.pack    = res.vcp1_pack || DEFAULT_PACK;
     applyConfigPatch(res);
     try {
@@ -521,6 +613,12 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
   if (area !== "sync") return;
   if (changes.vcp1_enabled) {
     STATE.enabled = !!changes.vcp1_enabled.newValue;
+    if (STATE.enabled && STATE.wander) RUNTIME.lastMoveTs = performance.now();
+    applyState();
+  }
+  if (changes.vcp1_wander) {
+    STATE.wander = !!changes.vcp1_wander.newValue;
+    if (STATE.enabled && STATE.wander) RUNTIME.lastMoveTs = performance.now();
     applyState();
   }
   if (changes.vcp1_pack) {
