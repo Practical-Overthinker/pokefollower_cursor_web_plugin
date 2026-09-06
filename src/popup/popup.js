@@ -1,9 +1,19 @@
+import {
+  MAX_ROSTER_SIZE,
+  addRosterSlot,
+  normalizeRoster,
+  removeRosterSlot,
+  selectedIndexAfterRemoval,
+  setRosterPack
+} from "./roster.js";
+
 const DEFAULT_PACK = "retro/gen-1/001-bulbasaur";
 
 document.addEventListener("DOMContentLoaded", () => {
   const enabledEl = document.getElementById("enabled");
   const wanderEl  = document.getElementById("wander");
   const packEl    = document.getElementById("pack");
+  const rosterSlotsEl = document.getElementById("rosterSlots");
   const pickerEl  = document.querySelector(".picker");
   const searchBtn = pickerEl ? pickerEl.querySelector(".glass") : null;
   const searchEl  = document.getElementById("packSearch");
@@ -12,6 +22,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const blockedDialog = document.getElementById("blockedPageDialog");
   const blockedDetail = document.getElementById("blockedPageDetail");
   const blockedOk = document.getElementById("blockedPageOk");
+  let roster = [DEFAULT_PACK];
+  let selectedSlot = 0;
+
+  // Helper: save but do NOT auto-close (except when toggling enable)
+  const save = (obj) => chrome.storage.sync.set(obj);
 
   const blockedPageDetails = {
     "browser-page": "Chrome blocks extensions from running on its internal pages. Open a normal website to use your follower.",
@@ -66,6 +81,112 @@ document.addEventListener("DOMContentLoaded", () => {
     const n = parseInt(last, 10);
     return Number.isFinite(n) ? n : 9999;
   }
+
+  function currentRosterPack() {
+    return roster[selectedSlot] || DEFAULT_PACK;
+  }
+
+  function persistRoster() {
+    save({ vcp1_packs: roster, vcp1_pack: currentRosterPack() });
+  }
+
+  function showRosterPack(pack) {
+    if (!packEl) return;
+    closePackSearch();
+    packEl.value = pack;
+    if (packEl.selectedIndex === -1 && packEl.options.length) {
+      packEl.selectedIndex = 0;
+    }
+    setPreviewForPack(packEl.value || pack);
+  }
+
+  function selectRosterSlot(index) {
+    if (!Number.isInteger(index) || index < 0 || index >= roster.length) return;
+    selectedSlot = index;
+    renderRosterSlots();
+    showRosterPack(currentRosterPack());
+  }
+
+  function openRosterSlot(index) {
+    if (index !== roster.length || roster.length >= MAX_ROSTER_SIZE) return;
+    roster = addRosterSlot(roster, DEFAULT_PACK);
+    selectedSlot = roster.length - 1;
+    persistRoster();
+    renderRosterSlots();
+    showRosterPack(currentRosterPack());
+  }
+
+  function removeSelectedRosterSlot(index) {
+    if (index <= 0 || index !== selectedSlot) return;
+    const nextRoster = removeRosterSlot(roster, index);
+    if (nextRoster === roster) return;
+    roster = nextRoster;
+    selectedSlot = selectedIndexAfterRemoval(index);
+    persistRoster();
+    renderRosterSlots();
+    showRosterPack(currentRosterPack());
+  }
+
+  function renderRosterSlots() {
+    if (!rosterSlotsEl) return;
+    rosterSlotsEl.replaceChildren();
+
+    for (let index = 0; index < MAX_ROSTER_SIZE; index += 1) {
+      const occupied = index < roster.length;
+      const nextEmpty = index === roster.length;
+      const item = document.createElement("div");
+      item.className = "slot-item";
+
+      const selectButton = document.createElement("button");
+      selectButton.type = "button";
+      selectButton.className = occupied ? "slot-select" : "slot-select empty";
+      selectButton.dataset.slotIndex = String(index);
+      selectButton.setAttribute("aria-selected", String(occupied && index === selectedSlot));
+      selectButton.setAttribute("aria-pressed", String(occupied && index === selectedSlot));
+      selectButton.setAttribute(
+        "aria-label",
+        occupied
+          ? `Pokémon slot ${index + 1}, ${formatPackLabel(roster[index])}`
+          : nextEmpty
+            ? `Add Pokémon slot ${index + 1}`
+            : `Empty Pokémon slot ${index + 1}`
+      );
+
+      if (!occupied) {
+        selectButton.disabled = !nextEmpty;
+      } else {
+        const image = document.createElement("img");
+        image.src = "../assets/icons/pokeball-32.png";
+        image.alt = "";
+        image.setAttribute("aria-hidden", "true");
+        selectButton.appendChild(image);
+      }
+
+      selectButton.addEventListener("click", () => {
+        if (occupied) selectRosterSlot(index);
+        else if (nextEmpty) openRosterSlot(index);
+      });
+      item.appendChild(selectButton);
+
+      if (occupied && index > 0 && index === selectedSlot) {
+        const removeButton = document.createElement("button");
+        removeButton.type = "button";
+        removeButton.className = "slot-remove";
+        removeButton.dataset.slotIndex = String(index);
+        removeButton.setAttribute("aria-label", `Remove Pokémon from slot ${index + 1}`);
+        removeButton.textContent = "×";
+        removeButton.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          removeSelectedRosterSlot(index);
+        });
+        item.appendChild(removeButton);
+      }
+
+      rosterSlotsEl.appendChild(item);
+    }
+  }
+
   const PACK_META = [];
   function normalizePackOptions() {
     if (!packEl) return;
@@ -183,11 +304,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Load saved settings
   chrome.storage.sync.get(
-    ["vcp1_enabled", "vcp1_wander", "vcp1_pack", "vcp1_scale", "vcp1_scale_version", "vcp1_offset", "vcp1_lerp"],
+    ["vcp1_enabled", "vcp1_wander", "vcp1_pack", "vcp1_packs", "vcp1_scale", "vcp1_scale_version", "vcp1_offset", "vcp1_lerp"],
     (res) => {
       enabledEl.checked = !!res.vcp1_enabled;
       wanderEl.checked = !!res.vcp1_wander;
-      const storedPack  = res.vcp1_pack || DEFAULT_PACK;
+      const hadRoster = Array.isArray(res.vcp1_packs) && res.vcp1_packs.length > 0;
+      roster = normalizeRoster(res.vcp1_packs, res.vcp1_pack || DEFAULT_PACK);
+      selectedSlot = 0;
+      const storedPack = currentRosterPack();
 
       const scale  = normalizeStoredScale(res.vcp1_scale, res.vcp1_scale_version);
       const offset = (typeof res.vcp1_offset === "number") ? res.vcp1_offset : DEFAULTS.vcp1_offset;
@@ -217,13 +341,12 @@ document.addEventListener("DOMContentLoaded", () => {
           packEl.value = storedPack;
           if (packEl.selectedIndex === -1 && packEl.options.length) packEl.selectedIndex = 0;
         }
-        setPreviewForPack(packEl.value);
+        renderRosterSlots();
+        showRosterPack(storedPack);
+        if (!hadRoster) persistRoster();
       })();
     }
   );
-
-  // Helper: save but do NOT auto-close (except when toggling enable)
-  const save = (obj) => chrome.storage.sync.set(obj);
 
   // Toggle enable — close popup (people expect immediate feedback here)
   enabledEl.addEventListener("change", () => {
@@ -239,7 +362,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Pack select — save but keep popup open, and update preview
   packEl.addEventListener("change", () => {
-    save({ vcp1_pack: packEl.value });
+    roster = setRosterPack(roster, selectedSlot, packEl.value || DEFAULT_PACK);
+    persistRoster();
+    renderRosterSlots();
     setPreviewForPack(packEl.value);
   });
 

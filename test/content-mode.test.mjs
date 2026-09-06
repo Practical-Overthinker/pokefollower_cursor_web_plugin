@@ -106,7 +106,7 @@ test("popup places Wander Mode below Follow Mode", () => {
 
 test("popup keeps stacked modes compact and readable", () => {
   const html = fs.readFileSync(new URL("../src/popup/index.html", import.meta.url), "utf8");
-  assert.match(html, /\.header\s*\{[^}]*height:\s*40px/s);
+  assert.match(html, /\.header\s*\{[^}]*height:\s*58px/s);
   assert.match(html, /\.mode-toggles\s*\{[^}]*gap:\s*2px/s);
   assert.match(html, /\.mode-toggle\s*\{[^}]*font-size:\s*12px/s);
 });
