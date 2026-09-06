@@ -12,3 +12,6 @@ CLAUDE.md
 # Python generated files
 __pycache__/
 *.pyc
+
+# Local feature worktrees
+.worktrees/
