@@ -60,8 +60,14 @@
     return Math.max(0, finite(baseSpeed)) * 0.5;
   }
 
-  function shouldSleepAfterWander({ hasSleep, destinations, randomValue }) {
-    return !!hasSleep && destinations >= 3 && finite(randomValue) < 0.35;
+  function shouldSleepAfterWander({
+    hasSleep,
+    destinations,
+    randomValue,
+    minDestinations = 3,
+    chance = 0.35
+  }) {
+    return !!hasSleep && destinations >= minDestinations && finite(randomValue) < chance;
   }
 
   function pickWanderTarget(bounds, currentTarget, random = Math.random) {
