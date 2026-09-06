@@ -104,6 +104,13 @@ test("popup places Wander Mode below Follow Mode", () => {
   assert.match(html, /\.mode-toggles\s*\{[^}]*flex-direction:\s*column/s);
 });
 
+test("popup keeps stacked modes compact and readable", () => {
+  const html = fs.readFileSync(new URL("../src/popup/index.html", import.meta.url), "utf8");
+  assert.match(html, /\.header\s*\{[^}]*height:\s*40px/s);
+  assert.match(html, /\.mode-toggles\s*\{[^}]*gap:\s*2px/s);
+  assert.match(html, /\.mode-toggle\s*\{[^}]*font-size:\s*12px/s);
+});
+
 test("wander facing is preserved when walking settles into idle", () => {
   const source = fs.readFileSync(new URL("../src/content.js", import.meta.url), "utf8");
   assert.doesNotMatch(
