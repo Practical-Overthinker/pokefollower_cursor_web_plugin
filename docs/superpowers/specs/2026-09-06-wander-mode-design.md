@@ -23,8 +23,8 @@ When both toggles are on, cursor movement has priority:
 
 1. Cursor movement immediately returns the Pokémon to Follow Mode.
 2. After approximately three seconds without cursor movement, the Pokémon enters Wander Mode.
-3. It selects a random destination inside a viewport-safe rectangle, walks there using the existing speed setting, pauses briefly, and selects another destination.
-4. Moving the cursor again cancels the current wander target and returns the Pokémon to the cursor target.
+3. It selects a nearby destination inside a viewport-safe rectangle, walks there at a calm pace derived from the popup speed setting, pauses briefly, and selects another destination.
+4. Moving the cursor again cancels the current wander behavior, including a sleep pause, and returns the Pokémon to the cursor target.
 
 This keeps the product's core identity intact while making the second toggle useful rather than silently overriding Follow Mode.
 
@@ -33,15 +33,16 @@ This keeps the product's core identity intact while making the second toggle use
 - Keep one follower element and one animation loop.
 - Change the spawn condition to `followMode || wanderMode`.
 - Split target selection into follow and wander paths; the existing movement, animation, scale, and offset logic remains shared.
-- Store wander state only in runtime memory: current wander target, next allowed wander time, and whether the pointer is currently considered active.
+- Store wander state only in runtime memory: current wander target, current behavior phase, pause deadlines, destination count, and whether the pointer is currently considered active.
 - Keep wander destinations inside the viewport with a conservative edge margin based on the follower's scaled dimensions.
-- Recalculate bounds on resize and avoid choosing the same destination repeatedly.
-- Use the existing walk speed setting for travel; use a short randomized pause at destinations instead of adding another popup control in the first version.
+- Recalculate bounds on resize, avoid choosing the same destination repeatedly, and limit each new destination to a nearby roam radius of at most 220 px when the viewport allows it.
+- Keep Follow Mode's existing speed mapping unchanged. Wander Mode uses 50% of that popup-controlled speed, so the speed control remains the source of truth while autonomous movement stays relaxed.
+- Cycle Wander Mode through `roam`, `idle`, and `sleep` phases. Idle pauses last 1.5–4.5 seconds. After at least three destinations, a pack with a sleep state has a 35% chance to sleep for 15–60 seconds; after sleeping, the destination count resets and roaming resumes. Packs without a sleep state skip the sleep phase.
 
 ## Popup changes
 
 - Rename the current visible label from `Enable Follower` to `Follow Mode`.
-- Add a matching `Wander Mode` toggle.
+- Add a matching `Wander Mode` toggle directly underneath `Follow Mode` in the same right-aligned control group.
 - Persist each toggle independently through `chrome.storage.sync`.
 - Keep both toggles off/on states clear to keyboard and screen-reader users.
 
@@ -58,6 +59,8 @@ Add focused tests for:
 
 - The four toggle combinations and spawn decision.
 - Wander destinations staying within safe viewport bounds.
+- Wander speed remaining tied to the popup speed with the 50% autonomous multiplier.
+- Wander phase transitions covering movement, idle pauses, sleep eligibility, bounded sleep duration, and resume.
 - Hybrid mode returning to Follow Mode when pointer movement resumes.
 - Existing Follow Mode behavior remaining unchanged when Wander Mode is off.
 
