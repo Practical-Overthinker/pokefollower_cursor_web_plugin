@@ -97,3 +97,9 @@ test("wander timing contract is present", () => {
   assert.match(source, /WANDER_SLEEP_MIN_MS\s*=\s*15000/);
   assert.match(source, /WANDER_SLEEP_MAX_MS\s*=\s*60000/);
 });
+
+test("popup places Wander Mode below Follow Mode", () => {
+  const html = fs.readFileSync(new URL("../src/popup/index.html", import.meta.url), "utf8");
+  assert.ok(html.indexOf("Follow Mode") < html.indexOf("Wander Mode"));
+  assert.match(html, /\.mode-toggles\s*\{[^}]*flex-direction:\s*column/s);
+});
