@@ -80,7 +80,7 @@
       background: #fff; border: 1px solid #000; border-radius: 50%;
     }
 
-    /* Header row: brand left, mode toggles right */
+    /* Header row: roster controls left, mode toggles right */
     .header {
       position: relative;
       height: 58px;
@@ -96,7 +96,14 @@
       gap: 4px;
       min-width: 0;
     }
-    .brand { 
+    .brand {
+      position: absolute;
+      top: var(--announce-h);
+      left: 14px;
+      z-index: 2;
+      height: 28px;
+      display: flex;
+      align-items: center;
       font-weight: 600; font-style: normal; font-size: 12px; letter-spacing: .05em;
     }
     .roster-slots {
@@ -458,14 +465,13 @@
 </head>
 <body>
   <div class="announce">Thanks for 50k & feedback! Check footer link for updates :D</div>
+  <div class="brand">PokeFollower v4.0</div>
   <!-- Pokéball notch -->
   <div class="notch" aria-hidden="true"></div>
 
   <!-- Header -->
   <div class="header">
     <div class="brand-block">
-      <div class="brand">PokeFollower v4.0</div>
-      <div id="rosterSlots" class="roster-slots" role="group" aria-label="Pokémon slots"></div>
       <button id="rosterModeButton" class="roster-mode" type="button" data-mode="individual" aria-pressed="false" aria-label="Roster mode: Individual">
         <span class="roster-mode-label">Individual</span>
         <span class="roster-mode-icon" aria-hidden="true">
@@ -473,6 +479,7 @@
           <span class="roster-mode-option" data-mode="multiple">6</span>
         </span>
       </button>
+      <div id="rosterSlots" class="roster-slots" role="group" aria-label="Pokémon slots"></div>
     </div>
     <div class="mode-toggles" role="group" aria-label="Follower modes">
       <label class="mode-toggle" for="enabled">

@@ -68,9 +68,12 @@ test("roster mode normalizes to Individual and toggles between the two modes", (
 test("popup markup provides the slot strip and remove affordance contract", () => {
   const html = fs.readFileSync(new URL("../src/popup/index.html", import.meta.url), "utf8");
   assert.match(html, /class="brand-block"/);
+  assert.match(html, /class="brand"/);
   assert.match(html, /id="rosterSlots"/);
   assert.match(html, /id="rosterModeButton"/);
-  assert.ok(html.indexOf("rosterSlots") < html.indexOf("rosterModeButton"));
+  assert.ok(html.indexOf("rosterModeButton") < html.indexOf("rosterSlots"));
+  assert.match(html, /\.brand\s*\{[^}]*top:\s*var\(--announce-h\)/s);
+  assert.match(html, /\.brand\s*\{[^}]*left:\s*14px/s);
   assert.match(html, /\.roster-mode\s*\{[^}]*width:/s);
   assert.match(html, /class="roster-mode-icon"/);
   assert.match(html, /class="roster-mode-label"/);
