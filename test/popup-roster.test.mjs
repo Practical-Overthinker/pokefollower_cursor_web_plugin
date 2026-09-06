@@ -74,6 +74,7 @@ test("popup markup provides the slot strip and remove affordance contract", () =
   assert.ok(html.indexOf("rosterModeButton") < html.indexOf("rosterSlots"));
   assert.match(html, /\.brand\s*\{[^}]*top:\s*var\(--announce-h\)/s);
   assert.match(html, /\.brand\s*\{[^}]*left:\s*14px/s);
+  assert.match(html, /\.brand\s*\{[^}]*color:\s*#fff/s);
   assert.match(html, /\.roster-mode\s*\{[^}]*width:/s);
   assert.match(html, /class="roster-mode-icon"/);
   assert.match(html, /class="roster-mode-label"/);
@@ -84,6 +85,7 @@ test("popup markup provides the slot strip and remove affordance contract", () =
   assert.match(html, /\.roster-mode\s*\{[^}]*margin-top:\s*2px/s);
   assert.match(html, /<script type="module" src="popup\.js"><\/script>/);
   assert.match(html, /\.slot-remove\s*\{[^}]*position:\s*absolute/s);
+  assert.match(html, /\.slot-remove\s*\{[^}]*bottom:\s*-6px/s);
   assert.match(html, /\.slot-remove\s*\{[^}]*background:\s*#ef4036/s);
   assert.match(html, /\.slot-remove\s*\{[^}]*border[^}]*#000/s);
 });
