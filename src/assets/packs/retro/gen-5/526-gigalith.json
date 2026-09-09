@@ -10,8 +10,8 @@
         "w": 40,
         "h": 48
       },
-      "fps": 4,
-      "frames": 4,
+      "fps": 9,
+      "frames": 9,
       "rows": {
         "front": 0,
         "frontRight": 1,
@@ -46,7 +46,7 @@
       "sheet": "Sleep-Anim.webp",
       "frame": {
         "w": 40,
-        "h": 32
+        "h": 40
       },
       "fps": 2,
       "frames": 2,

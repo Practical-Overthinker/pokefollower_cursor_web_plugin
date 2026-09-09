@@ -8,10 +8,10 @@
       "sheet": "Idle-Anim.webp",
       "frame": {
         "w": 32,
-        "h": 40
+        "h": 48
       },
-      "fps": 7,
-      "frames": 7,
+      "fps": 4,
+      "frames": 4,
       "rows": {
         "front": 0,
         "frontRight": 1,
@@ -26,8 +26,8 @@
     "walk": {
       "sheet": "Walk-Anim.webp",
       "frame": {
-        "w": 40,
-        "h": 32
+        "w": 32,
+        "h": 48
       },
       "fps": 4,
       "frames": 4,

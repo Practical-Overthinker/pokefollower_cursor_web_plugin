@@ -7,11 +7,11 @@
     "idle": {
       "sheet": "Idle-Anim.webp",
       "frame": {
-        "w": 40,
-        "h": 56
+        "w": 24,
+        "h": 32
       },
-      "fps": 4,
-      "frames": 4,
+      "fps": 5,
+      "frames": 5,
       "rows": {
         "front": 0,
         "frontRight": 1,
@@ -26,11 +26,11 @@
     "walk": {
       "sheet": "Walk-Anim.webp",
       "frame": {
-        "w": 40,
-        "h": 64
+        "w": 24,
+        "h": 32
       },
-      "fps": 8,
-      "frames": 8,
+      "fps": 4,
+      "frames": 4,
       "rows": {
         "front": 0,
         "frontRight": 1,
